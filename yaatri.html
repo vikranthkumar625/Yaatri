@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yaari Booking - NIT Warangal</title>
+    <style>
+        /* General Page Styling */
+       body { 
+            font-family: Arial, sans-serif; 
+            /* NEW: A fresh, academic "Campus Tech" gradient (Blue to Teal) */
+            background: linear-gradient(135deg, rgb(52, 230, 233) 0%, #96f4fc 50%, #a2ecdc 100%); 
+            padding: 20px; 
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .container { 
+            width: 100%; /* <-- ADD THIS: Forces it to stretch */
+            max-width: 650px; /* <-- CHANGE THIS: Increase this number to make the box wider (it was 550px) */
+            margin: 0 auto; 
+            background: linear-gradient( rgb(106, 77, 203),rgb(205, 192, 220),rgb(117, 83, 176)  );
+            backdrop-filter: blur(10px);
+            padding: 25px; 
+            border-radius: 15px; 
+            box-shadow: 0 15px 35px rgba(5, 116, 168, 0.2), 0 5px 15px rgba(13, 58, 219, 0.1); 
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        h2 { 
+            text-align: center; 
+            color: #1a2980; /* Darker academic blue for the title */
+            margin-top: 0; 
+            font-size: 28px;
+            letter-spacing: 1px;
+        }
+
+        .timer { 
+            text-align: center; 
+            color: #d32f2f; 
+            font-weight: bold; 
+            margin-bottom: 25px; 
+            font-size: 18px;
+            background: #ffebee;
+            padding: 8px;
+            border-radius: 8px;
+        }
+        
+        /* Layout Wrappers */
+        .layout-wrapper { 
+            display: flex; 
+            justify-content: space-around; 
+            align-items: center; 
+            margin-bottom: 30px; 
+        }
+
+        /* Vehicle Structure */
+        .vehicle-container { 
+            background: #ffffff; 
+            padding: 20px; 
+            border-radius: 15px; 
+            border: 2px solid #e0e0e0; 
+            flex-grow: 0; 
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .driver-area { 
+            display: flex; 
+            justify-content: flex-end; 
+            padding-right: 30px; 
+            margin-bottom: 15px; 
+            border-bottom: 2px dashed #b0bec5; 
+            padding-bottom: 10px; 
+        }
+
+        .bus-layout { 
+            display: grid; 
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 15px; 
+        }
+
+        /* Seat Styles */
+        .seat { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            cursor: pointer; 
+            user-select: none; 
+            color: #b0bec5; 
+            transition: all 0.2s ease; 
+        }
+
+        .seat:not(.booked):hover { 
+            transform: scale(1.15); 
+            color: #78909c; 
+        }
+        
+        .seat.selected { 
+            color: #4CAF50; 
+            transform: scale(1.1);
+        } 
+        
+        .seat.booked { 
+            color: #ff4c4c; 
+            cursor: not-allowed; 
+            opacity: 0.6; 
+        }
+
+        .seat-number { 
+            font-size: 14px; 
+            font-weight: bold; 
+            margin-top: 5px; 
+            color: #333; 
+        }
+
+        .seat.back-row svg { 
+            transform: rotate(180deg); 
+        }
+
+        /* Legend Styles */
+        .legend-container { 
+            background: #ffffff; 
+            padding: 15px; 
+            border-radius: 12px; 
+            border: 1px solid #e0e0e0; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .legend-container h4 { 
+            margin-top: 0; 
+            margin-bottom: 15px; 
+            text-align: center; 
+            color: #555; 
+        }
+
+        .legend-item { 
+            display: flex; 
+            align-items: center; 
+            margin-bottom: 12px; 
+            font-size: 14px; 
+            color: #333; 
+            font-weight: bold; 
+        }
+
+        .legend-icon { 
+            width: 30px; 
+            height: 30px; 
+            margin-right: 10px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
+
+        .legend-available { color: #b0bec5; }
+        .legend-booked { color: #ff4c4c; opacity: 0.6; }
+        .legend-selected { color: #4CAF50; }
+        
+        /* Form Elements */
+        .form-group { 
+            margin-bottom: 15px; 
+        }
+
+        label { 
+            display: block; 
+            margin-bottom: 8px; 
+            font-weight: bold; 
+            color: #444; 
+        }
+
+        select { 
+            width: 100%; 
+            padding: 12px; 
+            border: 1px solid #ccc; 
+            border-radius: 8px; 
+            box-sizing: border-box; 
+            font-size: 15px;
+            background-color: #fcfcfc;
+            transition: border-color 0.3s ease;
+        }
+        
+        select:focus {
+            outline: none;
+            border-color: #4364F7;
+        }
+
+        button { 
+            width: 100%; 
+            padding: 14px; 
+            background: linear-gradient(to right, #4364F7, #6FB1FC); 
+            color: white; 
+            border: none; 
+            border-radius: 8px; 
+            font-size: 18px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            margin-top: 15px; 
+            box-shadow: 0 4px 10px rgba(67, 100, 247, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        button:hover { 
+            background: linear-gradient(to right, #0052D4, #4364F7); 
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(67, 100, 247, 0.4);
+        }
+        
+        /* Step Highlight Box */
+        .step-highlight { 
+            background: #eef2fd; 
+            padding: 15px; 
+            border-radius: 8px; 
+            border: 1px solid #d0dcf7; 
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Book Yaatri 1</h2>
+    <div class="timer">Time left to book: <span id="time">10:00</span></div>
+
+    <div class="form-group step-highlight">
+        <label for="num-passengers"> Select Number of Passengers</label>
+        <select id="num-passengers">
+            <option value="">-- Choose --</option>
+            <option value="1">1 Passenger</option>
+            <option value="2">2 Passengers</option>
+            <option value="3">3 Passengers</option>
+            <option value="4">4 Passengers</option>
+            <option value="5">5 Passengers</option>
+            <option value="6">6 Passengers</option>
+            <option value="7">7 Passengers</option>
+            <option value="8">8 Passengers</option>
+        </select>
+    </div>
+
+    <label style="text-align: center; margin-bottom: 10px;"> Click on the seats you want</label>
+    <div class="layout-wrapper">
+        <div class="vehicle-container">
+            <div class="driver-area">
+                <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#333" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="2"></circle>
+                    <line x1="12" y1="12" x2="22" y2="12"></line><line x1="12" y1="12" x2="6" y2="20"></line><line x1="12" y1="12" x2="6" y2="4"></line>
+                </svg>
+            </div>
+            <div class="bus-layout" id="seat-map"></div>
+        </div>
+
+        <div class="legend-container">
+            <h4>Seat</h4>
+            <div class="legend-item"><div class="legend-icon legend-available"><svg viewBox="0 0 24 24" width="25" height="25"><rect x="5" y="2" width="14" height="5" rx="2" fill="currentColor"/><rect x="3" y="8" width="18" height="14" rx="3" fill="currentColor"/></svg></div><span>Available</span></div>
+            <div class="legend-item"><div class="legend-icon legend-booked"><svg viewBox="0 0 24 24" width="25" height="25"><rect x="5" y="2" width="14" height="5" rx="2" fill="currentColor"/><rect x="3" y="8" width="18" height="14" rx="3" fill="currentColor"/></svg></div><span>Booked</span></div>
+            <div class="legend-item"><div class="legend-icon legend-selected"><svg viewBox="0 0 24 24" width="25" height="25"><rect x="5" y="2" width="14" height="5" rx="2" fill="currentColor"/><rect x="3" y="8" width="18" height="14" rx="3" fill="currentColor"/></svg></div><span>Selected</span></div>
+        </div>
+    </div> 
+
+    <div class="form-group">
+        <label for="boarding"> Boarding Point</label>
+        <select id="boarding">
+            <option value="">Select Boarding Point</option>
+            <option value="Ramappa">Ramappa Residency</option>
+            <option value="Kakatiya">Kakatiya Residency</option>
+            <option value="Priyadarshini_Sarojini">Priyadarshini and Sarojini</option>
+            <option value="Azad">Azad Block</option>
+            <option value="Bose">Bose Block</option>
+            <option value="Bhabha">Bhabha block</option>
+            <option value="ALC">Ambedkar Learning Center (ALC)</option>
+            <option value="Taaza">Taaza Tiffins</option>
+            <option value="Admin">Administration Building</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label for="dropping"> Dropping Point</label>
+        <select id="dropping">
+             <option value="">Select Dropping Point</option>
+        </select>
+    </div>
+
+    <button onclick="bookSeat()">Confirm Booking</button>
+</div>
+
+<script>
+    // --- 1. INITIALIZE SUPABASE ---
+    const { createClient } = supabase;
+    const supabaseUrl = 'https://sbvltccaagrsxtpqjcix.supabase.co';
+    const supabaseKey = 'sb_publishable_lbnUTnmaM0HKgMCH6bqWdA_QvtV8b_C';
+    const _supabase = createClient(supabaseUrl, supabaseKey);
+
+    // --- 2. AUTOMATED TIMER & VEHICLE LOOP ---
+    let currentYaatri = parseInt(localStorage.getItem('yaatriNumber')) || 1;
+    let endTime = parseInt(localStorage.getItem('yaatriEndTime')) || (Date.now() + 10 * 60 * 1000);
+
+    // Save state so it survives page refreshes
+    localStorage.setItem('yaatriNumber', currentYaatri);
+    localStorage.setItem('yaatriEndTime', endTime);
+
+    // Update the heading and grab the timer element
+    const titleElement = document.querySelector('h2');
+    if (titleElement) titleElement.innerText = `Book Yaatri ${currentYaatri}`;
+    const timeDisplay = document.getElementById('time');
+
+    // The Clock Engine
+    const timerInterval = setInterval(() => {
+        const now = Date.now();
+        let distance = endTime - now;
+
+        if (distance <= 0) {
+            triggerVehicleSwitch("Time is up!");
+        } else {
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+            if(timeDisplay) {
+                timeDisplay.innerText = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            }
+        }
+    }, 1000);
+
+    // The Switch Engine
+    function triggerVehicleSwitch(reason) {
+        currentYaatri = currentYaatri === 1 ? 2 : 1; 
+        endTime = Date.now() + 10 * 60 * 1000; 
+        
+        localStorage.setItem('yaatriNumber', currentYaatri);
+        localStorage.setItem('yaatriEndTime', endTime);
+        
+        alert(`${reason} Now opening bookings for Yaatri ${currentYaatri}.`);
+        location.reload(); 
+    }
+
+    // --- 3. SEAT MAP SETUP ---
+    const seatMap = document.getElementById('seat-map');
+    let selectedSeats = []; 
+    const numPassengersSelect = document.getElementById('num-passengers');
+
+    // Clear seats if the user changes the passenger count mid-way
+    numPassengersSelect.addEventListener('change', () => {
+        selectedSeats = [];
+        document.querySelectorAll('.seat.selected').forEach(s => s.classList.remove('selected'));
+    });
+
+    const chairIcon = `
+        <svg viewBox="0 0 24 24" width="45" height="45">
+            <rect x="5" y="2" width="14" height="5" rx="2" fill="currentColor"/>
+            <rect x="3" y="8" width="18" height="14" rx="3" fill="currentColor"/>
+        </svg>
+    `;
+
+    for (let i = 1; i <= 8; i++) {
+        const seat = document.createElement('div');
+        seat.className = 'seat';
+        if (i === 7 || i === 8) seat.classList.add('back-row');
+        
+        seat.innerHTML = `${chairIcon}<span class="seat-number">${i}</span>`;
+        
+        // FIXED: All seats are now completely open and clickable by default!
+        seat.onclick = () => selectSeat(seat, i);
+        
+        seatMap.appendChild(seat);
+    }
+
+    // --- 4. SEAT SELECTION LOGIC ---
+    function selectSeat(seatElement, seatNumber) {
+        const maxPassengers = parseInt(numPassengersSelect.value);
+
+        if (!maxPassengers) {
+            alert("Please select the Number of Passengers first!");
+            return;
+        }
+
+        const seatIndex = selectedSeats.indexOf(seatNumber);
+
+        if (seatIndex > -1) {
+            selectedSeats.splice(seatIndex, 1);
+            seatElement.classList.remove('selected');
+        } else {
+            if (selectedSeats.length >= maxPassengers) {
+                alert(`You have only chosen ${maxPassengers} passenger(s). Deselect a green seat if you want to change your choice.`);
+                return;
+            }
+            selectedSeats.push(seatNumber);
+            seatElement.classList.add('selected');
+        }
+    }
+
+    const boardingSelect = document.getElementById('boarding');
+    const droppingSelect = document.getElementById('dropping');
+    droppingSelect.innerHTML = boardingSelect.innerHTML;
+    droppingSelect.options[0].text = "Select Dropping Point";
+
+    // --- 5. BOOKING & CLOUD SAVE LOGIC ---
+    async function bookSeat() {
+        const maxPassengers = parseInt(numPassengersSelect.value);
+        const boardingText = boardingSelect.options[boardingSelect.selectedIndex].text;
+        const droppingText = droppingSelect.options[droppingSelect.selectedIndex].text;
+
+        if (!maxPassengers) return alert("Please select the number of passengers.");
+        if (selectedSeats.length !== maxPassengers) return alert(`Please select exactly ${maxPassengers} seat(s).`);
+        if (boardingSelect.value === "" || droppingSelect.value === "") return alert("Please select both boarding and dropping points.");
+        if (boardingText === droppingText) return alert("Boarding and dropping points cannot be the same.");
+
+        selectedSeats.sort((a, b) => a - b);
+        const seatString = selectedSeats.join(', ');
+
+        try {
+            // Send data directly to Supabase
+            const { data, error } = await _supabase
+                .from('bookings')
+                .insert([
+                    { 
+                        seat_numbers: seatString, 
+                        boarding_point: boardingText, 
+                        dropping_point: droppingText 
+                    }
+                ]);
+
+            if (error) throw error;
+
+            alert(`Success! Seats ${seatString} are saved in the cloud.`);
+            
+            document.querySelectorAll('.seat.selected').forEach(seat => {
+                seat.classList.replace('selected', 'booked');
+                seat.onclick = null; 
+            });
+            
+            selectedSeats = []; 
+            numPassengersSelect.value = ""; 
+
+            // --- NEW: CAPACITY CHECK ENGINE ---
+            // If all 8 seats are now red (booked), switch the vehicle early!
+            const bookedSeatsCount = document.querySelectorAll('.seat.booked').length;
+            if (bookedSeatsCount >= 8) {
+                setTimeout(() => {
+                    triggerVehicleSwitch("All seats are full!");
+                }, 1000); // 1-second delay so they see the success message first
+            }
+
+        } catch (error) {
+            console.error("Supabase Error:", error.message);
+            alert("Could not connect to Supabase. Check console for details.");
+        }
+    }
+
+</script>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome - NIT W Yaatri</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+        }
+
+        /* --- 1. VIDEO BACKGROUND STYLES --- */
+        #video-background {
+            position: fixed;
+            right: 0;
+            bottom: 0;
+            min-width: 100%;
+            min-height: 100%;
+            width: auto;
+            height: auto;
+            z-index: -2; 
+            object-fit: cover; 
+        }
+
+        .video-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4); /* Darkens the video slightly so your card pops */
+            z-index: -1;
+        }
+        
+        /* --- 2. MAIN CARD STYLES --- */
+        .welcome-card {
+            /* Changed to rgba so the background is transparent, but your text stays solid! */
+            background: linear-gradient(rgba(0, 234, 255, 0.75), rgba(123, 170, 228, 0.75));
+            backdrop-filter: blur(10px);
+            padding: 40px 30px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 450px;
+            width: 90%;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            opacity: 0.6;
+            /* Keeps the animated car inside the box */
+            overflow: hidden; 
+
+            /* Your custom glowing animation */
+            animation: blink 2s linear alternate infinite;
+        }
+
+        /* Your Glowing Box Animation */
+        @keyframes blink {
+            from {
+                box-shadow: 0 0 35px rgba(13, 24, 238, 0.855), 0 5px 15px rgba(35, 61, 211, 0.648);
+            }
+            to {
+                box-shadow: 0 0 35px rgba(244, 226, 33, 0.855), 0 5px 15px rgb(203, 213, 9);
+            }
+        }
+
+        h1 {
+            color: #1a2980;
+            margin-top: 15px;
+            margin-bottom: 10px;
+            font-size: 26px;
+            line-height: 1.3;
+        }
+
+        p {
+            color: #171717;
+            font-size: 16px;
+            margin-bottom: 35px;
+            line-height: 1.5;
+            font-weight: bold; /* Made this bold to stand out against the video */
+        }
+
+        .enter-btn {
+            display: inline-block;
+            padding: 15px 35px;
+            background: linear-gradient(to right, #213cb0, #5099ec);
+            color: white;
+            text-decoration: none; 
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(67, 100, 247, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .enter-btn:hover {
+            background: linear-gradient(to right, #0052D4, #4364F7);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(67, 100, 247, 0.4);
+        }
+
+        /* --- 3. CAR ANIMATION STYLES --- */
+        .logo-icon {
+            color: #1a2980; /* Darkened the car so it matches the heading text */
+            margin-bottom: 10px;
+            animation: driveAcross 4s linear infinite; 
+        }
+
+        @keyframes driveAcross {
+            0% { 
+                transform: translateX(-150px); 
+                opacity: 0; 
+            }
+            15% { 
+                opacity: 1; 
+            }
+            85% { 
+                opacity: 1; 
+            }
+            100% { 
+                transform: translateX(150px); 
+                opacity: 0; 
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <video autoplay muted loop playsinline id="video-background">
+        <source src="https://res.cloudinary.com/dg2hieael/video/upload/v1774153963/video4_havx8r.mp4" type="video/mp4">
+    </video>
+    
+    <div class="video-overlay"></div>
+
+    <div class="welcome-card">
+        
+        <svg class="logo-icon" viewBox="0 0 24 24" width="70" height="70" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="8" width="18" height="12" rx="2"></rect>
+            <path d="M4 8v-2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2"></path>
+            <circle cx="8" cy="20" r="2"></circle>
+            <circle cx="16" cy="20" r="2"></circle>
+            <line x1="3" y1="13" x2="21" y2="13"></line>
+        </svg>
+
+        <h1>Welcome to the NIT W Yaatri Booking</h1>
+        <p>The fastest and easiest way to book your campus rides. Secure your seat in seconds.</p>
+        
+        <a href="yaatri.html" class="enter-btn">Enter Dashboard ➔</a>
+    </div>
+
+</body>
+</html>

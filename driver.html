@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <title>Driver Dashboard - Yaatri</title>
+    <style>
+        
+    body { font-family: Arial, sans-serif; background-color: #333; color: white; padding: 20px; }
+    body::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: url("https://electricvehicles.in/wp-content/uploads/2020/03/Indias-first-autonomous-buggy-2.jpg") no-repeat center/cover;
+    opacity: 0.4;   
+    z-index: -1;
+    
+
+}
+    .container { 
+        max-width: 800px; 
+        margin: 0 auto; 
+        background: #222; 
+        padding: 20px; 
+        border-radius: 10px; 
+        border: 1px solid #58a6ff; /* Added solid border to anchor the glow */
+        box-shadow: 0 0 15px rgba(88, 166, 255, 0.4), 0 0 30px rgba(88, 166, 255, 0.2); 
+    }
+
+    /* 1. Updated Heading Style */
+    h1 { 
+        text-align: center; 
+        color: #58a6ff; /* Changed to match the blue container glow */
+        border-bottom: 2px solid #58a6ff; 
+        padding-bottom: 10px; 
+        text-transform: uppercase; /* Makes "DRIVER ROUTE" look bold and official */
+        letter-spacing: 2px;
+        text-shadow: 0 0 10px rgba(88, 166, 255, 0.5); /* Adds a slight text glow */
+    }
+    
+    /* Table Styles */
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; color: #333; border-radius: 8px; overflow: hidden; }
+    th, td { padding: 15px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background-color: #0056b3; color: white; font-size: 18px; }
+    tr:hover { background-color: #f1f1f1; }
+    .seat-badge { background: #ff4c4c; color: white; padding: 5px 10px; border-radius: 5px; font-weight: bold; }
+
+    /* Controls Container */
+    .controls { display: flex; justify-content: space-between; margin-top: 20px; }
+    
+    /* 2. Base Button Styles */
+    button { 
+        padding: 12px 20px; 
+        border: none; 
+        border-radius: 8px; 
+        font-size: 16px; 
+        cursor: pointer; 
+        font-weight: bold; 
+        color: white;
+        transition: all 0.3s ease; /* Makes the hover effect smooth */
+    }
+
+    /* 3. Refresh Button (Green Gradient + Thick Shadow) */
+    .btn-refresh { 
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); 
+        /* Thick outer shadow + an inset shadow for a 3D button effect */
+        box-shadow: 0 6px 15px rgba(56, 239, 125, 0.3), inset 0 -3px 0 rgba(0,0,0,0.15); 
+    }
+
+    .btn-refresh:hover {
+        transform: translateY(-3px); /* Makes button "lift" up */
+        box-shadow: 0 10px 20px rgba(56, 239, 125, 0.5), inset 0 -3px 0 rgba(0,0,0,0.15);
+    }
+
+    /* 4. Clear Button (Red/Orange Gradient + Thick Shadow) */
+    .btn-clear { 
+        background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+        box-shadow: 0 6px 15px rgba(255, 65, 108, 0.3), inset 0 -3px 0 rgba(0,0,0,0.15); 
+    }
+
+    .btn-clear:hover {
+        transform: translateY(-3px); /* Makes button "lift" up */
+        box-shadow: 0 10px 20px rgba(255, 65, 108, 0.5), inset 0 -3px 0 rgba(0,0,0,0.15);
+    }
+
+    .empty-msg { text-align: center; padding: 20px; font-size: 18px; color: #aaa; }
+</style>
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 id="driver-title">Yaatri 1 - Driver Route</h1>
+    
+    <div class="controls">
+        <button class="btn-refresh" onclick="loadBookings()">🔄 Refresh List</button>
+        <button class="btn-clear" onclick="finishTrip()">🏁 Finish Trip (Clear Data)</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Seat #</th>
+                <th>Pick-Up (Boarding)</th>
+                <th>Drop-Off (Destination)</th>
+                <th>Time Booked</th>
+            </tr>
+        </thead>
+        <tbody id="passenger-list">
+            </tbody>
+    </table>
+    
+    <div id="empty-message" class="empty-msg" style="display: none;">
+        No passengers currently booked for this trip.
+    </div>
+</div>
+
+<script>
+    // Initialize Supabase (Use the exact same URL and Key from your project dashboard)
+    const { createClient } = supabase;
+    const supabaseUrl = 'https://sbvltccaagrsxtpqjcix.supabase.co';
+    const supabaseKey = 'sb_publishable_lbnUTnmaM0HKgMCH6bqWdA_QvtV8b_C';
+    const _supabase = createClient(supabaseUrl, supabaseKey);
+// NEW: Function to sync the title with the Student page
+    function syncYaatriNumber() {
+        // Peek into the browser memory to see what number the Student page is on
+        let currentYaatri = localStorage.getItem('yaatriNumber') || 1;
+        document.getElementById('driver-title').innerText = `Yaatri ${currentYaatri} - Driver Route`;
+    }
+    // Function to load data from the cloud
+    async function loadBookings() {
+        syncYaatriNumber();
+        
+        const tableBody = document.getElementById('passenger-list');
+        const emptyMsg = document.getElementById('empty-message');
+        tableBody.innerHTML = ''; 
+
+        try {
+            // Fetch all data from the Supabase 'bookings' table
+            const { data: bookings, error } = await _supabase
+                .from('bookings')
+                .select('*')
+                .order('created_at', { ascending: true });
+
+            if (error) throw error;
+
+            if (bookings.length === 0) {
+                emptyMsg.style.display = 'block';
+            } else {
+                emptyMsg.style.display = 'none';
+                
+                bookings.forEach(booking => {
+                    // Convert standard timestamp to readable time
+                    const dateObj = new Date(booking.created_at);
+                    const timeString = dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+                    const row = `
+                        <tr>
+                            <td><span class="seat-badge">Seats: ${booking.seat_numbers}</span></td>
+                            <td><strong>${booking.boarding_point}</strong></td>
+                            <td><strong>${booking.dropping_point}</strong></td>
+                            <td>${timeString}</td>
+                        </tr>
+                    `;
+                    tableBody.innerHTML += row;
+                });
+            }
+        } catch (error) {
+            console.error("Error fetching data:", error.message);
+            emptyMsg.innerHTML = "Error loading from cloud database.";
+            emptyMsg.style.display = 'block';
+        }
+    }
+
+    // Function to clear the cloud database after the trip is done
+    async function finishTrip() {
+        if(confirm("Are you sure you want to finish the trip? This will clear all passenger data from the cloud.")) {
+            try {
+                // Supabase requires a filter to delete rows. 
+                // Telling it to delete where 'id' is greater than 0 deletes EVERYTHING.
+                const { error } = await _supabase
+                    .from('bookings')
+                    .delete()
+                    .gt('id', 0); 
+
+                if (error) throw error;
+
+                // Clear the visual table on the screen
+                document.getElementById('passenger-list').innerHTML = '';
+                document.getElementById('empty-message').style.display = 'block';
+
+                alert("Trip finished!. Vehicle is ready for the next 10-minute slot.");
+            } catch (error) {
+                console.error("Error clearing database:", error.message);
+                alert("Could not clear the database. Check console for details.");
+            }
+        }
+    }
+
+    // Load data automatically when the driver opens the page
+    loadBookings();
+</script>
+
+</body>
+</html>
