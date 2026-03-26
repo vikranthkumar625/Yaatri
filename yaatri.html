@@ -286,8 +286,7 @@
 
     <button id="confirm-btn" onclick="bookSeat()">Confirm Booking</button>
 </div>
-
-<script>
+    <script>
     // --- 1. INITIALIZE SUPABASE & DOM ---
     const { createClient } = supabase;
     const supabaseUrl = 'https://sbvltccaagrsxtpqjcix.supabase.co';
@@ -296,7 +295,7 @@
 
     let currentYaatri = 0; 
     const titleElement = document.querySelector('h2');
-    const confirmBtn = document.getElementById('confirm-btn');
+    const confirmBtn = document.getElementById('confirm-btn') || document.querySelector('button[onclick="bookSeat()"]');
     const timeDisplay = document.getElementById('time');
     const seatMap = document.getElementById('seat-map');
     let selectedSeats = []; 
@@ -318,7 +317,7 @@
         seatMap.appendChild(seat);
     }
 
-    // --- 3. THE CLOCK ENGINE (FIXED) ---
+    // --- 3. THE CLOCK ENGINE ---
     let endTime = parseInt(localStorage.getItem('yaatriEndTime')) || (Date.now() + 10 * 60 * 1000);
     localStorage.setItem('yaatriEndTime', endTime);
 
@@ -328,7 +327,6 @@
 
         if (distance <= 0) {
             timeDisplay.innerText = "00:00";
-            // If time is up, lock the button!
             if (currentYaatri !== 0 && confirmBtn) { 
                 confirmBtn.disabled = true;
                 confirmBtn.innerText = "Time is up! Waiting for Driver...";
@@ -342,7 +340,7 @@
         }
     }, 1000);
 
-    // --- 4. THE MASTER SYNC ENGINE (FIXED) ---
+    // --- 4. THE MASTER SYNC ENGINE ---
     async function syncSystem() {
         try {
             // A. Check Cloud State
@@ -361,15 +359,18 @@
                 });
             }
 
-            // --- THE TIMER RESET FIX ---
+            // --- THE MEMORY TIMER FIX ---
             let distance = endTime - Date.now();
-            // If the driver switched vehicles, OR if the vehicle is completely empty but the timer is dead (00:00), RESTART THE CLOCK!
-            if ((currentYaatri !== 0 && state.active_yaatri !== currentYaatri && state.active_yaatri !== 0) || 
-                (bookedFromCloud.length === 0 && distance <= 0)) {
+            let savedYaatri = parseInt(localStorage.getItem('savedYaatriNumber')) || 0;
+
+            // If the vehicle number changed (e.g. 1 to 2) OR the vehicle is empty but time is dead -> RESTART!
+            if ((state.active_yaatri !== 0 && state.active_yaatri !== savedYaatri) || 
+                (bookedFromCloud.length === 0 && distance <= 0 && state.active_yaatri !== 0)) {
                 
                 endTime = Date.now() + 10 * 60 * 1000;
                 localStorage.setItem('yaatriEndTime', endTime);
-                distance = endTime - Date.now(); // Update distance
+                localStorage.setItem('savedYaatriNumber', state.active_yaatri); // Memorize the new vehicle!
+                distance = endTime - Date.now(); 
             }
             
             currentYaatri = state.active_yaatri;
@@ -410,12 +411,11 @@
                 }
             });
 
-            // --- THE BUTTON UNLOCK FIX ---
-            // If the time is NOT expired and the vehicle is NOT full, unlock the button!
+            // Unlock the button if there is time and space
             if (distance > 0 && bookedFromCloud.length < 8) {
                 confirmBtn.disabled = false;
                 confirmBtn.innerText = "Confirm Booking";
-                confirmBtn.style.background = ""; // Returns to CSS gradient
+                confirmBtn.style.background = ""; 
                 confirmBtn.style.cursor = "pointer";
             }
 
@@ -444,13 +444,11 @@
         }
     }
 
-    // Run immediately, then every 3 seconds
     syncSystem();
     setInterval(syncSystem, 3000);
 
     // --- 5. SEAT SELECTION & BOOKING ---
     function selectSeat(seatElement, seatNumber) {
-        // MUST CHOOSE PASSENGERS FIRST!
         const maxPassengers = parseInt(numPassengersSelect.value);
         if (!maxPassengers) return alert("Please select the Number of Passengers from the dropdown first!");
 
@@ -498,3 +496,4 @@
 </script>
 </body>
 </html>
+
