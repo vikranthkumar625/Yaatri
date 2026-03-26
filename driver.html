@@ -123,10 +123,21 @@
     const supabaseKey = 'sb_publishable_lbnUTnmaM0HKgMCH6bqWdA_QvtV8b_C';
     const _supabase = createClient(supabaseUrl, supabaseKey);
 // NEW: Function to sync the title with the Student page
-    function syncYaatriNumber() {
-        // Peek into the browser memory to see what number the Student page is on
-        let currentYaatri = localStorage.getItem('yaatriNumber') || 1;
-        document.getElementById('driver-title').innerText = `Yaatri ${currentYaatri} - Driver Route`;
+   // NEW: Cloud-Synced Title Function
+    async function syncYaatriNumber() {
+        try {
+            const { data, error } = await _supabase
+                .from('vehicle_state')
+                .select('yaatri_number')
+                .eq('id', 1)
+                .single();
+                
+            if (data) {
+                document.getElementById('driver-title').innerText = `Yaatri ${data.yaatri_number} - Driver Route`;
+            }
+        } catch (err) {
+            console.error("Could not fetch Yaatri number:", err);
+        }
     }
     // Function to load data from the cloud
     async function loadBookings() {
