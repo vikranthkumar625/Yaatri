@@ -1,232 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yaari Booking - NIT Warangal</title>
-    <style>
-        /* General Page Styling */
-       body { 
-            font-family: Arial, sans-serif; 
-            background: linear-gradient(135deg, rgb(52, 230, 233) 0%, #96f4fc 50%, #a2ecdc 100%); 
-            padding: 20px; 
-            min-height: 100vh;
-            margin: 0;
-            display: flex;
-            align-items: center;
-        }
-
-        .container { 
-            width: 100%; 
-            max-width: 650px; 
-            margin: 0 auto; 
-            background: linear-gradient( rgb(106, 77, 203),rgb(205, 192, 220),rgb(117, 83, 176)  );
-            backdrop-filter: blur(10px);
-            padding: 25px; 
-            border-radius: 15px; 
-            box-shadow: 0 15px 35px rgba(5, 116, 168, 0.2), 0 5px 15px rgba(13, 58, 219, 0.1); 
-            border: 1px solid rgba(255, 255, 255, 0.5);
-        }
-
-        h2 { 
-            text-align: center; 
-            color: #1a2980; 
-            margin-top: 0; 
-            font-size: 28px;
-            letter-spacing: 1px;
-        }
-
-        .timer { 
-            text-align: center; 
-            color: #d32f2f; 
-            font-weight: bold; 
-            margin-bottom: 25px; 
-            font-size: 18px;
-            background: #ffebee;
-            padding: 8px;
-            border-radius: 8px;
-        }
-        
-        .layout-wrapper { 
-            display: flex; 
-            justify-content: space-around; 
-            align-items: center; 
-            margin-bottom: 30px; 
-        }
-
-        .vehicle-container { 
-            background: #ffffff; 
-            padding: 20px; 
-            border-radius: 15px; 
-            border: 2px solid #e0e0e0; 
-            flex-grow: 0; 
-            box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
-        }
-
-        .driver-area { 
-            display: flex; 
-            justify-content: flex-end; 
-            padding-right: 30px; 
-            margin-bottom: 15px; 
-            border-bottom: 2px dashed #b0bec5; 
-            padding-bottom: 10px; 
-        }
-
-        .bus-layout { 
-            display: grid; 
-            grid-template-columns: repeat(2, 1fr); 
-            gap: 15px; 
-        }
-
-        .seat { 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            cursor: pointer; 
-            user-select: none; 
-            color: #b0bec5; 
-            transition: all 0.2s ease; 
-        }
-
-        .seat:not(.booked):hover { 
-            transform: scale(1.15); 
-            color: #78909c; 
-        }
-        
-        .seat.selected { 
-            color: #4CAF50; 
-            transform: scale(1.1);
-        } 
-        
-        .seat.booked { 
-            color: #ff4c4c !important; 
-            cursor: not-allowed; 
-            opacity: 0.6; 
-        }
-
-        .seat-number { 
-            font-size: 14px; 
-            font-weight: bold; 
-            margin-top: 5px; 
-            color: #333; 
-        }
-
-        .seat.back-row svg { 
-            transform: rotate(180deg); 
-        }
-
-        .legend-container { 
-            background: #ffffff; 
-            padding: 15px; 
-            border-radius: 12px; 
-            border: 1px solid #e0e0e0; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
-
-        .legend-container h4 { 
-            margin-top: 0; 
-            margin-bottom: 15px; 
-            text-align: center; 
-            color: #555; 
-        }
-
-        .legend-item { 
-            display: flex; 
-            align-items: center; 
-            margin-bottom: 12px; 
-            font-size: 14px; 
-            color: #333; 
-            font-weight: bold; 
-        }
-
-        .legend-icon { width: 30px; height: 30px; margin-right: 10px; display: flex; align-items: center; justify-content: center; }
-        .legend-available { color: #b0bec5; }
-        .legend-booked { color: #ff4c4c; opacity: 0.6; }
-        .legend-selected { color: #4CAF50; }
-        
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 8px; font-weight: bold; color: #444; }
-        select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 15px; background-color: #fcfcfc; transition: border-color 0.3s ease; }
-        select:focus { outline: none; border-color: #4364F7; }
-
-        button { 
-            width: 100%; padding: 14px; background: linear-gradient(to right, #4364F7, #6FB1FC); color: white; border: none; border-radius: 8px; font-size: 18px; cursor: pointer; font-weight: bold; margin-top: 15px; box-shadow: 0 4px 10px rgba(67, 100, 247, 0.3); transition: all 0.3s ease;
-        }
-        button:hover:not(:disabled) { background: linear-gradient(to right, #0052D4, #4364F7); transform: translateY(-2px); box-shadow: 0 6px 15px rgba(67, 100, 247, 0.4); }
-        button:disabled { cursor: not-allowed; }
-        
-        .step-highlight { background: #eef2fd; padding: 15px; border-radius: 8px; border: 1px solid #d0dcf7; margin-bottom: 20px; }
-    </style>
-</head>
-<body>
-
-<div class="container">
-    <h2>Loading Yaatri...</h2>
-    <div class="timer">Time left to book: <span id="time">10:00</span></div>
-
-    <div class="form-group step-highlight">
-        <label for="num-passengers"> Select Number of Passengers</label>
-        <select id="num-passengers">
-            <option value="">-- Choose --</option>
-            <option value="1">1 Passenger</option>
-            <option value="2">2 Passengers</option>
-            <option value="3">3 Passengers</option>
-            <option value="4">4 Passengers</option>
-            <option value="5">5 Passengers</option>
-            <option value="6">6 Passengers</option>
-            <option value="7">7 Passengers</option>
-            <option value="8">8 Passengers</option>
-        </select>
-    </div>
-
-    <label style="text-align: center; margin-bottom: 10px;"> Click on the seats you want</label>
-    <div class="layout-wrapper">
-        <div class="vehicle-container">
-            <div class="driver-area">
-                <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#333" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="2"></circle>
-                    <line x1="12" y1="12" x2="22" y2="12"></line><line x1="12" y1="12" x2="6" y2="20"></line><line x1="12" y1="12" x2="6" y2="4"></line>
-                </svg>
-            </div>
-            <div class="bus-layout" id="seat-map"></div>
-        </div>
-
-        <div class="legend-container">
-            <h4>Seat</h4>
-            <div class="legend-item"><div class="legend-icon legend-available"><svg viewBox="0 0 24 24" width="25" height="25"><rect x="5" y="2" width="14" height="5" rx="2" fill="currentColor"/><rect x="3" y="8" width="18" height="14" rx="3" fill="currentColor"/></svg></div><span>Available</span></div>
-            <div class="legend-item"><div class="legend-icon legend-booked"><svg viewBox="0 0 24 24" width="25" height="25"><rect x="5" y="2" width="14" height="5" rx="2" fill="currentColor"/><rect x="3" y="8" width="18" height="14" rx="3" fill="currentColor"/></svg></div><span>Booked</span></div>
-            <div class="legend-item"><div class="legend-icon legend-selected"><svg viewBox="0 0 24 24" width="25" height="25"><rect x="5" y="2" width="14" height="5" rx="2" fill="currentColor"/><rect x="3" y="8" width="18" height="14" rx="3" fill="currentColor"/></svg></div><span>Selected</span></div>
-        </div>
-    </div> 
-
-    <div class="form-group">
-        <label for="boarding"> Boarding Point</label>
-        <select id="boarding">
-            <option value="">Select Boarding Point</option>
-            <option value="maingate">MAIN ENTRANCE</option>
-            <option value="Ramappa">Ramappa Residency</option>
-            <option value="Kakatiya">Kakatiya Residency</option>
-            <option value="Priyadarshini_Sarojini">Priyadarshini and Sarojini</option>
-            <option value="Azad">Azad Block</option>
-            <option value="Bose">Bose Block</option>
-            <option value="Bhabha">Bhabha block</option>
-            <option value="ALC">Ambedkar Learning Center (ALC)</option>
-            <option value="Taaza">Taaza Tiffins</option>
-            <option value="Admin">Administration Building</option>
-        </select>
-    </div>
-
-    <div class="form-group">
-        <label for="dropping"> Dropping Point</label>
-        <select id="dropping">
-             <option value="">Select Dropping Point</option>
-        </select>
-    </div>
-
-    <button id="confirm-btn" onclick="bookSeat()">Confirm Booking</button>
-</div>
-
 <script>
     // --- 1. INITIALIZE SUPABASE & DOM ---
     const { createClient } = supabase;
@@ -234,9 +5,9 @@
     const supabaseKey = 'sb_publishable_lbnUTnmaM0HKgMCH6bqWdA_QvtV8b_C';
     const _supabase = createClient(supabaseUrl, supabaseKey);
 
-    let currentYaatri = 0; // Starts at 0 so we know when it loads
+    let currentYaatri = 0; 
     const titleElement = document.querySelector('h2');
-    const confirmBtn = document.getElementById('confirm-btn');
+    const confirmBtn = document.getElementById('confirm-btn') || document.querySelector('button[onclick="bookSeat()"]');
     const timeDisplay = document.getElementById('time');
     const seatMap = document.getElementById('seat-map');
     let selectedSeats = []; 
@@ -258,7 +29,7 @@
         seatMap.appendChild(seat);
     }
 
-    // --- 3. THE CLOCK ENGINE ---
+    // --- 3. THE CLOCK ENGINE (FIXED) ---
     let endTime = parseInt(localStorage.getItem('yaatriEndTime')) || (Date.now() + 10 * 60 * 1000);
     localStorage.setItem('yaatriEndTime', endTime);
 
@@ -268,10 +39,12 @@
 
         if (distance <= 0) {
             timeDisplay.innerText = "00:00";
-            if (currentYaatri !== 0) { // Only lock if we aren't already in full lockdown
+            // If time is up, lock the button!
+            if (currentYaatri !== 0 && confirmBtn) { 
                 confirmBtn.disabled = true;
                 confirmBtn.innerText = "Time is up! Waiting for Driver...";
                 confirmBtn.style.background = "#555";
+                confirmBtn.style.cursor = "not-allowed";
             }
         } else {
             const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
@@ -280,40 +53,14 @@
         }
     }, 1000);
 
-    // --- 4. THE MASTER SYNC ENGINE ---
+    // --- 4. THE MASTER SYNC ENGINE (FIXED) ---
     async function syncSystem() {
         try {
             // A. Check Cloud State
             const { data: state } = await _supabase.from('vehicle_state').select('*').eq('id', 1).single();
             
-            // B. Timer Reset Logic (If the driver switched vehicles, reset the 10-minute clock!)
-            if (currentYaatri !== 0 && state.active_yaatri !== currentYaatri && state.active_yaatri !== 0) {
-                endTime = Date.now() + 10 * 60 * 1000;
-                localStorage.setItem('yaatriEndTime', endTime);
-            }
-            currentYaatri = state.active_yaatri;
-
-            // C. TOTAL LOCKDOWN SCENARIO (Both are full)
-            if (currentYaatri === 0) {
-                titleElement.innerText = "NO VEHICLES AVAILABLE";
-                confirmBtn.disabled = true;
-                confirmBtn.innerText = "Yaatris are currently driving. Please wait.";
-                confirmBtn.style.background = "#555";
-                
-                // Turn all seats gray to show they can't be clicked
-                document.querySelectorAll('.seat').forEach(seat => {
-                    seat.classList.add('booked');
-                    seat.style.color = "#555";
-                    seat.onclick = null;
-                });
-                return; // Stop here!
-            }
-
-            // D. NORMAL SCENARIO (A vehicle is available)
-            titleElement.innerText = `Book Yaatri ${currentYaatri}`;
-            
-            // Fetch bookings ONLY for active vehicle
-            const { data: bookings } = await _supabase.from('bookings').select('seat_numbers').eq('yaatri_id', currentYaatri);
+            // B. Fetch bookings for active vehicle
+            const { data: bookings } = await _supabase.from('bookings').select('seat_numbers').eq('yaatri_id', state.active_yaatri);
             
             let bookedFromCloud = [];
             if (bookings) {
@@ -325,12 +72,44 @@
                 });
             }
 
+            // --- THE TIMER RESET FIX ---
+            let distance = endTime - Date.now();
+            // If the driver switched vehicles, OR if the vehicle is completely empty but the timer is dead (00:00), RESTART THE CLOCK!
+            if ((currentYaatri !== 0 && state.active_yaatri !== currentYaatri && state.active_yaatri !== 0) || 
+                (bookedFromCloud.length === 0 && distance <= 0)) {
+                
+                endTime = Date.now() + 10 * 60 * 1000;
+                localStorage.setItem('yaatriEndTime', endTime);
+                distance = endTime - Date.now(); // Update distance
+            }
+            
+            currentYaatri = state.active_yaatri;
+
+            // C. TOTAL LOCKDOWN SCENARIO (Both are full)
+            if (currentYaatri === 0) {
+                titleElement.innerText = "NO VEHICLES AVAILABLE";
+                confirmBtn.disabled = true;
+                confirmBtn.innerText = "Yaatris are currently driving. Please wait.";
+                confirmBtn.style.background = "#555";
+                confirmBtn.style.cursor = "not-allowed";
+                
+                document.querySelectorAll('.seat').forEach(seat => {
+                    seat.classList.add('booked');
+                    seat.style.color = "#555";
+                    seat.onclick = null;
+                });
+                return; // Stop here!
+            }
+
+            // D. NORMAL SCENARIO (A vehicle is available)
+            titleElement.innerText = `Book Yaatri ${currentYaatri}`;
+
             // Paint Seats
             document.querySelectorAll('.seat').forEach((seat, index) => {
                 const seatNum = index + 1;
                 if (!bookedFromCloud.includes(seatNum)) {
                     seat.classList.remove('booked');
-                    seat.style.color = ""; // Restore color
+                    seat.style.color = ""; 
                     seat.onclick = () => selectSeat(seat, seatNum);
                 } else {
                     seat.classList.remove('selected');
@@ -342,15 +121,16 @@
                 }
             });
 
-            // Restore Button if time isn't up
-            const distance = endTime - Date.now();
+            // --- THE BUTTON UNLOCK FIX ---
+            // If the time is NOT expired and the vehicle is NOT full, unlock the button!
             if (distance > 0 && bookedFromCloud.length < 8) {
                 confirmBtn.disabled = false;
                 confirmBtn.innerText = "Confirm Booking";
-                confirmBtn.style.background = ""; 
+                confirmBtn.style.background = ""; // Returns to CSS gradient
+                confirmBtn.style.cursor = "pointer";
             }
 
-            // E. VEHICLE FULL LOGIC -> Auto-Switch or Total Lockdown
+            // E. VEHICLE FULL LOGIC
             if (bookedFromCloud.length >= 8) {
                 let nextYaatri = 0; 
                 if (currentYaatri === 1 && state.y2_available) nextYaatri = 2;
@@ -381,15 +161,16 @@
 
     // --- 5. SEAT SELECTION & BOOKING ---
     function selectSeat(seatElement, seatNumber) {
+        // MUST CHOOSE PASSENGERS FIRST!
         const maxPassengers = parseInt(numPassengersSelect.value);
-        if (!maxPassengers) return alert("Please select the Number of Passengers first!");
+        if (!maxPassengers) return alert("Please select the Number of Passengers from the dropdown first!");
 
         const seatIndex = selectedSeats.indexOf(seatNumber);
         if (seatIndex > -1) {
             selectedSeats.splice(seatIndex, 1);
             seatElement.classList.remove('selected');
         } else {
-            if (selectedSeats.length >= maxPassengers) return alert(`You have only chosen ${maxPassengers} passenger(s).`);
+            if (selectedSeats.length >= maxPassengers) return alert(`You have only chosen ${maxPassengers} passenger(s). Click a green seat to unselect it first.`);
             selectedSeats.push(seatNumber);
             seatElement.classList.add('selected');
         }
@@ -426,5 +207,3 @@
         }
     }
 </script>
-</body>
-</html>
