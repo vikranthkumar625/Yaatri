@@ -78,10 +78,16 @@
     .empty-msg { text-align: center; padding: 20px; font-size: 18px; color: #aaa; }
     </style>
 </head>
+
 <body>
 
 <div class="container">
     <h1 id="driver-title">Yaatri 1 - Driver Route</h1>
+    
+    <select id="driver-select" onchange="loadBookings()" style="width: 100%; padding: 12px; margin-bottom: 20px; font-size: 16px; font-weight: bold; background: #0056b3; color: white; border: none; border-radius: 8px; cursor: pointer; outline: 2px solid #58a6ff;">
+        <option value="1">I am driving Yaatri 1</option>
+        <option value="2">I am driving Yaatri 2</option>
+    </select>
     
     <div class="controls">
         <button class="btn-refresh" onclick="loadBookings()">🔄 Refresh List</button>
@@ -113,27 +119,19 @@
     const supabaseKey = 'sb_publishable_lbnUTnmaM0HKgMCH6bqWdA_QvtV8b_C';
     const _supabase = createClient(supabaseUrl, supabaseKey);
 
-    // NEW: We need to store the current vehicle number so the Finish Trip button knows what to switch to!
-    let currentYaatri = 1; 
-
-    // --- 2. FETCH YAATRI NUMBER ---
-    async function fetchCloudYaatri() {
-        try {
-            const { data } = await _supabase.from('vehicle_state').select('yaatri_number').eq('id', 1).single();
-            if (data) {
-                currentYaatri = data.yaatri_number; // Save the number to our variable
-                document.getElementById('driver-title').innerText = `YAATRI ${currentYaatri} - DRIVER ROUTE`;
-            }
-        } catch (err) {
-            console.error("Error fetching Yaatri number:", err);
-        }
-    }
-
-    // --- 3. FETCH & DISPLAY BOOKINGS ---
+    // --- 2. FETCH & DISPLAY BOOKINGS FOR SPECIFIC DRIVER ---
     async function loadBookings() {
         try {
-            // Grab all bookings, oldest to newest
-            const { data, error } = await _supabase.from('bookings').select('*').order('created_at', { ascending: true });
+            // Find out which Yaatri this driver is looking at from the dropdown
+            const myYaatri = parseInt(document.getElementById('driver-select').value);
+            document.getElementById('driver-title').innerText = `YAATRI ${myYaatri} - DRIVER ROUTE`;
+
+            // ONLY fetch bookings for this specific driver
+            const { data, error } = await _supabase
+                .from('bookings')
+                .select('*')
+                .eq('yaatri_id', myYaatri)
+                .order('created_at', { ascending: true });
             
             if (error) throw error;
 
@@ -151,7 +149,6 @@
                 data.forEach(booking => {
                     const row = document.createElement('tr');
                     
-                    // Format the timestamp nicely (e.g., "07:18 PM")
                     const date = new Date(booking.created_at);
                     let hours = date.getHours();
                     let minutes = date.getMinutes();
@@ -175,23 +172,36 @@
         }
     }
 
-    // --- 4. FINISH TRIP (CLEAR DATA & SWITCH YAATRI) ---
+    // --- 3. FINISH TRIP (CLEAR DATA & UNLOCK BOOKINGS) ---
     async function finishTrip() {
-        if (!confirm("Are you sure you want to finish this trip and clear all passengers?")) return;
+        if (!confirm("Are you sure you want to finish this trip and clear your passengers?")) return;
+        
+        const myYaatri = parseInt(document.getElementById('driver-select').value);
 
         try {
-            // 1. Delete all records to start fresh
-            const { error } = await _supabase.from('bookings').delete().neq('id', 0); 
-            if (error) throw error;
+            // 1. Delete ONLY this specific driver's passengers (Leaves the other vehicle alone!)
+            const { error: deleteError } = await _supabase.from('bookings').delete().eq('yaatri_id', myYaatri); 
+            if (deleteError) throw deleteError;
             
-            // 2. Tell the cloud to switch to the NEXT Yaatri
-            let nextYaatri = currentYaatri === 1 ? 2 : 1;
-            await _supabase.from('vehicle_state').update({ yaatri_number: nextYaatri }).eq('id', 1);
+            // 2. Tell the cloud this specific vehicle is back and available!
+            const { data: state, error: stateError } = await _supabase.from('vehicle_state').select('*').eq('id', 1).single();
+            if (stateError) throw stateError;
+
+            let updates = {};
+            if (myYaatri === 1) updates.y1_available = true;
+            if (myYaatri === 2) updates.y2_available = true;
+
+            // 3. If the whole system was locked out (0), open it back up to this returning vehicle!
+            if (state.active_yaatri === 0) {
+                updates.active_yaatri = myYaatri; 
+            }
+
+            const { error: updateError } = await _supabase.from('vehicle_state').update(updates).eq('id', 1);
+            if (updateError) throw updateError;
             
-            alert(`Trip finished! Data cleared. Now accepting bookings for Yaatri ${nextYaatri}.`);
+            alert(`Trip finished! Yaatri ${myYaatri} is now empty and accepting new bookings.`);
             
-            // 3. Refresh driver screen
-            fetchCloudYaatri();
+            // Refresh driver screen
             loadBookings(); 
             
         } catch (error) {
@@ -200,16 +210,11 @@
         }
     }
 
-    // --- 5. INITIAL LOAD & REAL-TIME SYNC ---
-    // NEW: Run these immediately when the page opens so it doesn't stay blank!
-    fetchCloudYaatri();
+    // --- 4. INITIAL LOAD & REAL-TIME SYNC ---
     loadBookings();
 
-    // Force the driver's screen to refresh data every 3 seconds
-    setInterval(() => {
-        fetchCloudYaatri();
-        loadBookings();
-    }, 3000);
+    // Force the driver's screen to refresh data every 3 seconds!
+    setInterval(loadBookings, 3000);
 </script>
 
 </body>
