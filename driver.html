@@ -113,12 +113,16 @@
     const supabaseKey = 'sb_publishable_lbnUTnmaM0HKgMCH6bqWdA_QvtV8b_C';
     const _supabase = createClient(supabaseUrl, supabaseKey);
 
+    // NEW: We need to store the current vehicle number so the Finish Trip button knows what to switch to!
+    let currentYaatri = 1; 
+
     // --- 2. FETCH YAATRI NUMBER ---
     async function fetchCloudYaatri() {
         try {
             const { data } = await _supabase.from('vehicle_state').select('yaatri_number').eq('id', 1).single();
             if (data) {
-                document.getElementById('driver-title').innerText = `YAATRI ${data.yaatri_number} - DRIVER ROUTE`;
+                currentYaatri = data.yaatri_number; // Save the number to our variable
+                document.getElementById('driver-title').innerText = `YAATRI ${currentYaatri} - DRIVER ROUTE`;
             }
         } catch (err) {
             console.error("Error fetching Yaatri number:", err);
@@ -171,18 +175,24 @@
         }
     }
 
-    // --- 4. FINISH TRIP (CLEAR DATA) ---
+    // --- 4. FINISH TRIP (CLEAR DATA & SWITCH YAATRI) ---
     async function finishTrip() {
         if (!confirm("Are you sure you want to finish this trip and clear all passengers?")) return;
 
         try {
-            // Delete all records to start fresh
+            // 1. Delete all records to start fresh
             const { error } = await _supabase.from('bookings').delete().neq('id', 0); 
-            
             if (error) throw error;
             
-            alert("Trip finished! Data cleared for the next round.");
-            loadBookings(); // Immediately empty the screen
+            // 2. Tell the cloud to switch to the NEXT Yaatri
+            let nextYaatri = currentYaatri === 1 ? 2 : 1;
+            await _supabase.from('vehicle_state').update({ yaatri_number: nextYaatri }).eq('id', 1);
+            
+            alert(`Trip finished! Data cleared. Now accepting bookings for Yaatri ${nextYaatri}.`);
+            
+            // 3. Refresh driver screen
+            fetchCloudYaatri();
+            loadBookings(); 
             
         } catch (error) {
             console.error("Error clearing data:", error.message);
@@ -190,11 +200,12 @@
         }
     }
 
-    // --- 5. STARTUP & REAL-TIME MULTIPLAYER SYNC ---
+    // --- 5. INITIAL LOAD & REAL-TIME SYNC ---
+    // NEW: Run these immediately when the page opens so it doesn't stay blank!
     fetchCloudYaatri();
     loadBookings();
 
-    // Force the driver's screen to refresh data every 3 seconds!
+    // Force the driver's screen to refresh data every 3 seconds
     setInterval(() => {
         fetchCloudYaatri();
         loadBookings();
