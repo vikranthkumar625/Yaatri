@@ -9,7 +9,6 @@
         /* General Page Styling */
        body { 
             font-family: Arial, sans-serif; 
-            /* NEW: A fresh, academic "Campus Tech" gradient (Blue to Teal) */
             background: linear-gradient(135deg, rgb(52, 230, 233) 0%, #96f4fc 50%, #a2ecdc 100%); 
             padding: 20px; 
             min-height: 100vh;
@@ -19,8 +18,8 @@
         }
 
         .container { 
-            width: 100%; /* <-- ADD THIS: Forces it to stretch */
-            max-width: 650px; /* <-- CHANGE THIS: Increase this number to make the box wider (it was 550px) */
+            width: 100%; 
+            max-width: 650px; 
             margin: 0 auto; 
             background: linear-gradient( rgb(106, 77, 203),rgb(205, 192, 220),rgb(117, 83, 176)  );
             backdrop-filter: blur(10px);
@@ -32,7 +31,7 @@
 
         h2 { 
             text-align: center; 
-            color: #1a2980; /* Darker academic blue for the title */
+            color: #1a2980; 
             margin-top: 0; 
             font-size: 28px;
             letter-spacing: 1px;
@@ -49,7 +48,6 @@
             border-radius: 8px;
         }
         
-        /* Layout Wrappers */
         .layout-wrapper { 
             display: flex; 
             justify-content: space-around; 
@@ -57,7 +55,6 @@
             margin-bottom: 30px; 
         }
 
-        /* Vehicle Structure */
         .vehicle-container { 
             background: #ffffff; 
             padding: 20px; 
@@ -82,7 +79,6 @@
             gap: 15px; 
         }
 
-        /* Seat Styles */
         .seat { 
             display: flex; 
             flex-direction: column; 
@@ -104,7 +100,7 @@
         } 
         
         .seat.booked { 
-            color: #ff4c4c; 
+            color: #ff4c4c !important; 
             cursor: not-allowed; 
             opacity: 0.6; 
         }
@@ -120,7 +116,6 @@
             transform: rotate(180deg); 
         }
 
-        /* Legend Styles */
         .legend-container { 
             background: #ffffff; 
             padding: 15px; 
@@ -145,82 +140,29 @@
             font-weight: bold; 
         }
 
-        .legend-icon { 
-            width: 30px; 
-            height: 30px; 
-            margin-right: 10px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-        }
-
+        .legend-icon { width: 30px; height: 30px; margin-right: 10px; display: flex; align-items: center; justify-content: center; }
         .legend-available { color: #b0bec5; }
         .legend-booked { color: #ff4c4c; opacity: 0.6; }
         .legend-selected { color: #4CAF50; }
         
-        /* Form Elements */
-        .form-group { 
-            margin-bottom: 15px; 
-        }
-
-        label { 
-            display: block; 
-            margin-bottom: 8px; 
-            font-weight: bold; 
-            color: #444; 
-        }
-
-        select { 
-            width: 100%; 
-            padding: 12px; 
-            border: 1px solid #ccc; 
-            border-radius: 8px; 
-            box-sizing: border-box; 
-            font-size: 15px;
-            background-color: #fcfcfc;
-            transition: border-color 0.3s ease;
-        }
-        
-        select:focus {
-            outline: none;
-            border-color: #4364F7;
-        }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #444; }
+        select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 15px; background-color: #fcfcfc; transition: border-color 0.3s ease; }
+        select:focus { outline: none; border-color: #4364F7; }
 
         button { 
-            width: 100%; 
-            padding: 14px; 
-            background: linear-gradient(to right, #4364F7, #6FB1FC); 
-            color: white; 
-            border: none; 
-            border-radius: 8px; 
-            font-size: 18px; 
-            cursor: pointer; 
-            font-weight: bold; 
-            margin-top: 15px; 
-            box-shadow: 0 4px 10px rgba(67, 100, 247, 0.3);
-            transition: all 0.3s ease;
+            width: 100%; padding: 14px; background: linear-gradient(to right, #4364F7, #6FB1FC); color: white; border: none; border-radius: 8px; font-size: 18px; cursor: pointer; font-weight: bold; margin-top: 15px; box-shadow: 0 4px 10px rgba(67, 100, 247, 0.3); transition: all 0.3s ease;
         }
-
-        button:hover { 
-            background: linear-gradient(to right, #0052D4, #4364F7); 
-            transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(67, 100, 247, 0.4);
-        }
+        button:hover:not(:disabled) { background: linear-gradient(to right, #0052D4, #4364F7); transform: translateY(-2px); box-shadow: 0 6px 15px rgba(67, 100, 247, 0.4); }
+        button:disabled { cursor: not-allowed; }
         
-        /* Step Highlight Box */
-        .step-highlight { 
-            background: #eef2fd; 
-            padding: 15px; 
-            border-radius: 8px; 
-            border: 1px solid #d0dcf7; 
-            margin-bottom: 20px;
-        }
+        .step-highlight { background: #eef2fd; padding: 15px; border-radius: 8px; border: 1px solid #d0dcf7; margin-bottom: 20px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Book Yaatri 1</h2>
+    <h2>Loading Yaatri...</h2>
     <div class="timer">Time left to book: <span id="time">10:00</span></div>
 
     <div class="form-group step-highlight">
@@ -261,7 +203,6 @@
     <div class="form-group">
         <label for="boarding"> Boarding Point</label>
         <select id="boarding">
-            
             <option value="">Select Boarding Point</option>
             <option value="maingate">MAIN ENTRANCE</option>
             <option value="Ramappa">Ramappa Residency</option>
@@ -283,19 +224,20 @@
         </select>
     </div>
 
-    <button onclick="bookSeat()">Confirm Booking</button>
+    <button id="confirm-btn" onclick="bookSeat()">Confirm Booking</button>
 </div>
+
 <script>
-    // --- 1. INITIALIZE SUPABASE ---
-   <script>
+    // --- 1. INITIALIZE SUPABASE & DOM ---
     const { createClient } = supabase;
     const supabaseUrl = 'https://sbvltccaagrsxtpqjcix.supabase.co';
     const supabaseKey = 'sb_publishable_lbnUTnmaM0HKgMCH6bqWdA_QvtV8b_C';
     const _supabase = createClient(supabaseUrl, supabaseKey);
 
-    let currentYaatri = 1;
+    let currentYaatri = 0; // Starts at 0 so we know when it loads
     const titleElement = document.querySelector('h2');
-    const confirmBtn = document.querySelector('button[onclick="bookSeat()"]');
+    const confirmBtn = document.getElementById('confirm-btn');
+    const timeDisplay = document.getElementById('time');
     const seatMap = document.getElementById('seat-map');
     let selectedSeats = []; 
     const numPassengersSelect = document.getElementById('num-passengers');
@@ -305,7 +247,7 @@
         document.querySelectorAll('.seat.selected').forEach(s => s.classList.remove('selected'));
     });
 
-    // Create Seats
+    // --- 2. CREATE SEATS ---
     const chairIcon = `<svg viewBox="0 0 24 24" width="45" height="45"><rect x="5" y="2" width="14" height="5" rx="2" fill="currentColor"/><rect x="3" y="8" width="18" height="14" rx="3" fill="currentColor"/></svg>`;
     for (let i = 1; i <= 8; i++) {
         const seat = document.createElement('div');
@@ -316,20 +258,47 @@
         seatMap.appendChild(seat);
     }
 
-    // --- THE MASTER SYNC ENGINE ---
+    // --- 3. THE CLOCK ENGINE ---
+    let endTime = parseInt(localStorage.getItem('yaatriEndTime')) || (Date.now() + 10 * 60 * 1000);
+    localStorage.setItem('yaatriEndTime', endTime);
+
+    const timerInterval = setInterval(() => {
+        const now = Date.now();
+        let distance = endTime - now;
+
+        if (distance <= 0) {
+            timeDisplay.innerText = "00:00";
+            if (currentYaatri !== 0) { // Only lock if we aren't already in full lockdown
+                confirmBtn.disabled = true;
+                confirmBtn.innerText = "Time is up! Waiting for Driver...";
+                confirmBtn.style.background = "#555";
+            }
+        } else {
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+            timeDisplay.innerText = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+        }
+    }, 1000);
+
+    // --- 4. THE MASTER SYNC ENGINE ---
     async function syncSystem() {
         try {
-            // 1. Check the Cloud State
+            // A. Check Cloud State
             const { data: state } = await _supabase.from('vehicle_state').select('*').eq('id', 1).single();
+            
+            // B. Timer Reset Logic (If the driver switched vehicles, reset the 10-minute clock!)
+            if (currentYaatri !== 0 && state.active_yaatri !== currentYaatri && state.active_yaatri !== 0) {
+                endTime = Date.now() + 10 * 60 * 1000;
+                localStorage.setItem('yaatriEndTime', endTime);
+            }
             currentYaatri = state.active_yaatri;
 
-            // 2. TOTAL LOCKDOWN SCENARIO (Both are full)
+            // C. TOTAL LOCKDOWN SCENARIO (Both are full)
             if (currentYaatri === 0) {
-                if (titleElement) titleElement.innerText = "NO VEHICLES AVAILABLE";
+                titleElement.innerText = "NO VEHICLES AVAILABLE";
                 confirmBtn.disabled = true;
-                confirmBtn.innerText = "Yaatris are not available at this time. Please wait.";
+                confirmBtn.innerText = "Yaatris are currently driving. Please wait.";
                 confirmBtn.style.background = "#555";
-                confirmBtn.style.cursor = "not-allowed";
                 
                 // Turn all seats gray to show they can't be clicked
                 document.querySelectorAll('.seat').forEach(seat => {
@@ -337,13 +306,13 @@
                     seat.style.color = "#555";
                     seat.onclick = null;
                 });
-                return; // Stop here, don't do anything else
+                return; // Stop here!
             }
 
-            // 3. NORMAL SCENARIO (A vehicle is available)
-            if (titleElement) titleElement.innerText = `Book Yaatri ${currentYaatri}`;
+            // D. NORMAL SCENARIO (A vehicle is available)
+            titleElement.innerText = `Book Yaatri ${currentYaatri}`;
             
-            // Check bookings ONLY for the currently active vehicle
+            // Fetch bookings ONLY for active vehicle
             const { data: bookings } = await _supabase.from('bookings').select('seat_numbers').eq('yaatri_id', currentYaatri);
             
             let bookedFromCloud = [];
@@ -356,10 +325,8 @@
                 });
             }
 
-            const allSeatDivs = document.querySelectorAll('.seat');
-
-            // Reset seats
-            allSeatDivs.forEach((seat, index) => {
+            // Paint Seats
+            document.querySelectorAll('.seat').forEach((seat, index) => {
                 const seatNum = index + 1;
                 if (!bookedFromCloud.includes(seatNum)) {
                     seat.classList.remove('booked');
@@ -368,26 +335,25 @@
                 } else {
                     seat.classList.remove('selected');
                     seat.classList.add('booked');
-                    seat.style.color = ""; // Red color from CSS
+                    seat.style.color = ""; 
                     seat.onclick = null;
                     const selIndex = selectedSeats.indexOf(seatNum);
                     if (selIndex > -1) selectedSeats.splice(selIndex, 1);
                 }
             });
 
-            // Restore Button
-            confirmBtn.disabled = false;
-            confirmBtn.innerText = "Confirm Booking";
-            confirmBtn.style.background = ""; 
-            confirmBtn.style.cursor = "pointer";
+            // Restore Button if time isn't up
+            const distance = endTime - Date.now();
+            if (distance > 0 && bookedFromCloud.length < 8) {
+                confirmBtn.disabled = false;
+                confirmBtn.innerText = "Confirm Booking";
+                confirmBtn.style.background = ""; 
+            }
 
-            // 4. VEHICLE FULL LOGIC -> Auto-Switch or Total Lockdown
+            // E. VEHICLE FULL LOGIC -> Auto-Switch or Total Lockdown
             if (bookedFromCloud.length >= 8) {
-                let nextYaatri = 0; // Default to lockdown
-                
-                // If 1 is full, check if 2 is available
+                let nextYaatri = 0; 
                 if (currentYaatri === 1 && state.y2_available) nextYaatri = 2;
-                // If 2 is full, check if 1 is available
                 if (currentYaatri === 2 && state.y1_available) nextYaatri = 1;
 
                 let updates = { active_yaatri: nextYaatri };
@@ -413,7 +379,7 @@
     syncSystem();
     setInterval(syncSystem, 3000);
 
-    // --- SEAT SELECTION & BOOKING ---
+    // --- 5. SEAT SELECTION & BOOKING ---
     function selectSeat(seatElement, seatNumber) {
         const maxPassengers = parseInt(numPassengersSelect.value);
         if (!maxPassengers) return alert("Please select the Number of Passengers first!");
@@ -445,7 +411,6 @@
         const seatString = selectedSeats.join(', ');
 
         try {
-            // NEW: Saves the specific Yaatri ID to the database!
             const { error } = await _supabase.from('bookings').insert([
                 { yaatri_id: currentYaatri, seat_numbers: seatString, boarding_point: boardingSelect.options[boardingSelect.selectedIndex].text, dropping_point: droppingSelect.options[droppingSelect.selectedIndex].text }
             ]);
@@ -460,7 +425,6 @@
             console.error("Supabase Error:", error.message);
         }
     }
-</script>
 </script>
 </body>
 </html>
