@@ -385,7 +385,59 @@
         seatMap.appendChild(seat);
     }
 
-    // --- 4. SEAT SELECTION LOGIC ---
+    // --- 4. MULTIPLAYER SYNC ENGINE ---
+    // This constantly checks the cloud to see if someone else booked a seat!
+    async function syncBookedSeats() {
+        try {
+            const { data, error } = await _supabase.from('bookings').select('seat_numbers');
+            if (error) throw error;
+
+            if (data && data.length > 0) {
+                let bookedFromCloud = [];
+                
+                // Collect all seat numbers currently in the database
+                data.forEach(row => {
+                    if (row.seat_numbers) {
+                        // FORCE TEXT: Added "String()" so it never crashes on single numbers!
+                        const seats = String(row.seat_numbers).split(',').map(s => parseInt(s.trim()));
+                        bookedFromCloud.push(...seats);
+                    }
+                });
+
+                const allSeatDivs = document.querySelectorAll('.seat');
+                
+                bookedFromCloud.forEach(num => {
+                    const seatDiv = allSeatDivs[num - 1]; // arrays start at 0
+                    if (seatDiv && !seatDiv.classList.contains('booked')) {
+                        // Turn it RED instantly!
+                        seatDiv.classList.remove('selected');
+                        seatDiv.classList.add('booked');
+                        seatDiv.onclick = null; 
+
+                        // Boot the user off if they were trying to click it
+                        const index = selectedSeats.indexOf(num);
+                        if (index > -1) {
+                            selectedSeats.splice(index, 1);
+                        }
+                    }
+                });
+
+                // Auto-switch vehicle if all 8 are full
+                const bookedCount = document.querySelectorAll('.seat.booked').length;
+                if (bookedCount >= 8) {
+                    setTimeout(() => { triggerVehicleSwitch("All seats are full!"); }, 1000);
+                }
+            }
+        } catch (err) {
+            console.error("Sync error:", err);
+        }
+    }
+
+    // Run once immediately, then every 3 seconds
+    syncBookedSeats();
+    setInterval(syncBookedSeats, 3000);
+
+    // --- 5. SEAT SELECTION LOGIC ---
     function selectSeat(seatElement, seatNumber) {
         const maxPassengers = parseInt(numPassengersSelect.value);
 
@@ -414,7 +466,7 @@
     droppingSelect.innerHTML = boardingSelect.innerHTML;
     droppingSelect.options[0].text = "Select Dropping Point";
 
-    // --- 5. BOOKING & CLOUD SAVE LOGIC ---
+    // --- 6. BOOKING & CLOUD SAVE LOGIC ---
     async function bookSeat() {
         const maxPassengers = parseInt(numPassengersSelect.value);
         const boardingText = boardingSelect.options[boardingSelect.selectedIndex].text;
@@ -444,22 +496,11 @@
 
             alert(`Success! Seats ${seatString} are saved in the cloud.`);
             
-            document.querySelectorAll('.seat.selected').forEach(seat => {
-                seat.classList.replace('selected', 'booked');
-                seat.onclick = null; 
-            });
+            // Instantly sync the UI
+            syncBookedSeats();
             
             selectedSeats = []; 
             numPassengersSelect.value = ""; 
-
-            // --- NEW: CAPACITY CHECK ENGINE ---
-            // If all 8 seats are now red (booked), switch the vehicle early!
-            const bookedSeatsCount = document.querySelectorAll('.seat.booked').length;
-            if (bookedSeatsCount >= 8) {
-                setTimeout(() => {
-                    triggerVehicleSwitch("All seats are full!");
-                }, 1000); // 1-second delay so they see the success message first
-            }
 
         } catch (error) {
             console.error("Supabase Error:", error.message);
