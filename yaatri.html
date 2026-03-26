@@ -287,63 +287,15 @@
 </div>
 <script>
     // --- 1. INITIALIZE SUPABASE ---
+   <script>
     const { createClient } = supabase;
     const supabaseUrl = 'https://sbvltccaagrsxtpqjcix.supabase.co';
     const supabaseKey = 'sb_publishable_lbnUTnmaM0HKgMCH6bqWdA_QvtV8b_C';
     const _supabase = createClient(supabaseUrl, supabaseKey);
 
-    let currentYaatri = 0; // Starts at 0 so it forces a sync on load
+    let currentYaatri = 1;
     const titleElement = document.querySelector('h2');
-    const timeDisplay = document.getElementById('time');
     const confirmBtn = document.querySelector('button[onclick="bookSeat()"]');
-
-    // --- 2. THE CLOCK ENGINE (RESTORED & UPGRADED) ---
-    let endTime = parseInt(localStorage.getItem('yaatriEndTime')) || (Date.now() + 10 * 60 * 1000);
-    localStorage.setItem('yaatriEndTime', endTime);
-
-    const timerInterval = setInterval(() => {
-        const now = Date.now();
-        let distance = endTime - now;
-
-        if (distance <= 0) {
-            // Timer Lockdown!
-            if (timeDisplay) timeDisplay.innerText = "00:00";
-            if (confirmBtn) {
-                confirmBtn.disabled = true;
-                confirmBtn.innerText = "Time is up! Waiting for Driver...";
-                confirmBtn.style.background = "#555";
-                confirmBtn.style.cursor = "not-allowed";
-            }
-        } else {
-            // Clock Ticking
-            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-            if(timeDisplay) {
-                timeDisplay.innerText = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-            }
-        }
-    }, 1000);
-
-    // --- 3. FETCH YAATRI NUMBER & RESET TIMER ---
-    async function fetchCloudYaatri() {
-        try {
-            const { data } = await _supabase.from('vehicle_state').select('yaatri_number').eq('id', 1).single();
-            if (data) {
-                // If the Driver switched the Yaatri number, restart the 10-minute clock!
-                if (currentYaatri !== 0 && currentYaatri !== data.yaatri_number) {
-                    endTime = Date.now() + 10 * 60 * 1000;
-                    localStorage.setItem('yaatriEndTime', endTime);
-                }
-                
-                currentYaatri = data.yaatri_number;
-                if (titleElement) titleElement.innerText = `Book Yaatri ${currentYaatri}`;
-            }
-        } catch (err) {
-            console.error("Could not fetch Yaatri number:", err);
-        }
-    }
-
-    // --- 4. SEAT MAP SETUP ---
     const seatMap = document.getElementById('seat-map');
     let selectedSeats = []; 
     const numPassengersSelect = document.getElementById('num-passengers');
@@ -353,13 +305,8 @@
         document.querySelectorAll('.seat.selected').forEach(s => s.classList.remove('selected'));
     });
 
-    const chairIcon = `
-        <svg viewBox="0 0 24 24" width="45" height="45">
-            <rect x="5" y="2" width="14" height="5" rx="2" fill="currentColor"/>
-            <rect x="3" y="8" width="18" height="14" rx="3" fill="currentColor"/>
-        </svg>
-    `;
-
+    // Create Seats
+    const chairIcon = `<svg viewBox="0 0 24 24" width="45" height="45"><rect x="5" y="2" width="14" height="5" rx="2" fill="currentColor"/><rect x="3" y="8" width="18" height="14" rx="3" fill="currentColor"/></svg>`;
     for (let i = 1; i <= 8; i++) {
         const seat = document.createElement('div');
         seat.className = 'seat';
@@ -369,15 +316,39 @@
         seatMap.appendChild(seat);
     }
 
-    // --- 5. THE MULTIPLAYER & LOCKDOWN ENGINE ---
-    async function syncBookedSeats() {
+    // --- THE MASTER SYNC ENGINE ---
+    async function syncSystem() {
         try {
-            const { data, error } = await _supabase.from('bookings').select('seat_numbers');
-            if (error) throw error;
+            // 1. Check the Cloud State
+            const { data: state } = await _supabase.from('vehicle_state').select('*').eq('id', 1).single();
+            currentYaatri = state.active_yaatri;
 
+            // 2. TOTAL LOCKDOWN SCENARIO (Both are full)
+            if (currentYaatri === 0) {
+                if (titleElement) titleElement.innerText = "NO VEHICLES AVAILABLE";
+                confirmBtn.disabled = true;
+                confirmBtn.innerText = "Yaatris are not available at this time. Please wait.";
+                confirmBtn.style.background = "#555";
+                confirmBtn.style.cursor = "not-allowed";
+                
+                // Turn all seats gray to show they can't be clicked
+                document.querySelectorAll('.seat').forEach(seat => {
+                    seat.classList.add('booked');
+                    seat.style.color = "#555";
+                    seat.onclick = null;
+                });
+                return; // Stop here, don't do anything else
+            }
+
+            // 3. NORMAL SCENARIO (A vehicle is available)
+            if (titleElement) titleElement.innerText = `Book Yaatri ${currentYaatri}`;
+            
+            // Check bookings ONLY for the currently active vehicle
+            const { data: bookings } = await _supabase.from('bookings').select('seat_numbers').eq('yaatri_id', currentYaatri);
+            
             let bookedFromCloud = [];
-            if (data && data.length > 0) {
-                data.forEach(row => {
+            if (bookings) {
+                bookings.forEach(row => {
                     if (row.seat_numbers) {
                         const seats = String(row.seat_numbers).split(',').map(s => parseInt(s.trim()));
                         bookedFromCloud.push(...seats);
@@ -387,45 +358,50 @@
 
             const allSeatDivs = document.querySelectorAll('.seat');
 
-            // 1. If Driver cleared the trip, restore red seats back to green!
-            document.querySelectorAll('.seat.booked').forEach(seat => {
-                const seatNum = parseInt(seat.innerText);
+            // Reset seats
+            allSeatDivs.forEach((seat, index) => {
+                const seatNum = index + 1;
                 if (!bookedFromCloud.includes(seatNum)) {
                     seat.classList.remove('booked');
-                    seat.onclick = () => selectSeat(seat, seatNum); 
+                    seat.style.color = ""; // Restore color
+                    seat.onclick = () => selectSeat(seat, seatNum);
+                } else {
+                    seat.classList.remove('selected');
+                    seat.classList.add('booked');
+                    seat.style.color = ""; // Red color from CSS
+                    seat.onclick = null;
+                    const selIndex = selectedSeats.indexOf(seatNum);
+                    if (selIndex > -1) selectedSeats.splice(selIndex, 1);
                 }
             });
 
-            // 2. Paint new bookings Red
-            bookedFromCloud.forEach(num => {
-                const seatDiv = allSeatDivs[num - 1]; 
-                if (seatDiv && !seatDiv.classList.contains('booked')) {
-                    seatDiv.classList.remove('selected');
-                    seatDiv.classList.add('booked');
-                    seatDiv.onclick = null; 
+            // Restore Button
+            confirmBtn.disabled = false;
+            confirmBtn.innerText = "Confirm Booking";
+            confirmBtn.style.background = ""; 
+            confirmBtn.style.cursor = "pointer";
 
-                    const index = selectedSeats.indexOf(num);
-                    if (index > -1) selectedSeats.splice(index, 1);
-                }
-            });
+            // 4. VEHICLE FULL LOGIC -> Auto-Switch or Total Lockdown
+            if (bookedFromCloud.length >= 8) {
+                let nextYaatri = 0; // Default to lockdown
+                
+                // If 1 is full, check if 2 is available
+                if (currentYaatri === 1 && state.y2_available) nextYaatri = 2;
+                // If 2 is full, check if 1 is available
+                if (currentYaatri === 2 && state.y1_available) nextYaatri = 1;
 
-            // 3. SEAT LOCKDOWN TRIGGER
-            // (Only runs if the timer hasn't already locked the button)
-            const distance = endTime - Date.now();
-            if (bookedFromCloud.length >= 8 && distance > 0) {
-                if (confirmBtn) {
-                    confirmBtn.disabled = true;
-                    confirmBtn.innerText = "Vehicle En Route - Please Wait...";
-                    confirmBtn.style.background = "#555"; 
-                    confirmBtn.style.cursor = "not-allowed";
+                let updates = { active_yaatri: nextYaatri };
+                if (currentYaatri === 1) updates.y1_available = false;
+                if (currentYaatri === 2) updates.y2_available = false;
+
+                await _supabase.from('vehicle_state').update(updates).eq('id', 1);
+                
+                if (nextYaatri === 0) {
+                    alert(`Yaatri ${currentYaatri} is full! Both vehicles are now driving. Bookings paused.`);
+                } else {
+                    alert(`Yaatri ${currentYaatri} is full! Switching to Yaatri ${nextYaatri}.`);
                 }
-            } else if (bookedFromCloud.length < 8 && distance > 0) {
-                if (confirmBtn) {
-                    confirmBtn.disabled = false;
-                    confirmBtn.innerText = "Confirm Booking";
-                    confirmBtn.style.background = ""; 
-                    confirmBtn.style.cursor = "pointer";
-                }
+                location.reload();
             }
 
         } catch (err) {
@@ -433,16 +409,11 @@
         }
     }
 
-    // Sync everything every 3 seconds!
-    setInterval(() => {
-        fetchCloudYaatri();
-        syncBookedSeats();
-    }, 3000);
-    
-    fetchCloudYaatri();
-    syncBookedSeats();
+    // Run immediately, then every 3 seconds
+    syncSystem();
+    setInterval(syncSystem, 3000);
 
-    // --- 6. SEAT SELECTION & BOOKING ---
+    // --- SEAT SELECTION & BOOKING ---
     function selectSeat(seatElement, seatNumber) {
         const maxPassengers = parseInt(numPassengersSelect.value);
         if (!maxPassengers) return alert("Please select the Number of Passengers first!");
@@ -452,9 +423,7 @@
             selectedSeats.splice(seatIndex, 1);
             seatElement.classList.remove('selected');
         } else {
-            if (selectedSeats.length >= maxPassengers) {
-                return alert(`You have only chosen ${maxPassengers} passenger(s). Deselect a green seat to change.`);
-            }
+            if (selectedSeats.length >= maxPassengers) return alert(`You have only chosen ${maxPassengers} passenger(s).`);
             selectedSeats.push(seatNumber);
             seatElement.classList.add('selected');
         }
@@ -466,35 +435,32 @@
     droppingSelect.options[0].text = "Select Dropping Point";
 
     async function bookSeat() {
+        if (currentYaatri === 0) return alert("No vehicles available.");
         const maxPassengers = parseInt(numPassengersSelect.value);
-        const boardingText = boardingSelect.options[boardingSelect.selectedIndex].text;
-        const droppingText = droppingSelect.options[droppingSelect.selectedIndex].text;
-
         if (!maxPassengers) return alert("Please select the number of passengers.");
         if (selectedSeats.length !== maxPassengers) return alert(`Please select exactly ${maxPassengers} seat(s).`);
-        if (boardingSelect.value === "" || droppingSelect.value === "") return alert("Please select both boarding and dropping points.");
-        if (boardingText === droppingText) return alert("Boarding and dropping points cannot be the same.");
+        if (boardingSelect.value === "" || droppingSelect.value === "") return alert("Select both points.");
 
         selectedSeats.sort((a, b) => a - b);
         const seatString = selectedSeats.join(', ');
 
         try {
+            // NEW: Saves the specific Yaatri ID to the database!
             const { error } = await _supabase.from('bookings').insert([
-                { seat_numbers: seatString, boarding_point: boardingText, dropping_point: droppingText }
+                { yaatri_id: currentYaatri, seat_numbers: seatString, boarding_point: boardingSelect.options[boardingSelect.selectedIndex].text, dropping_point: droppingSelect.options[droppingSelect.selectedIndex].text }
             ]);
 
             if (error) throw error;
-            alert(`Success! Seats ${seatString} are booked.`);
+            alert(`Success! Seats ${seatString} booked on Yaatri ${currentYaatri}.`);
             
-            syncBookedSeats();
+            syncSystem();
             selectedSeats = []; 
             numPassengersSelect.value = ""; 
-
         } catch (error) {
             console.error("Supabase Error:", error.message);
-            alert("Could not connect to Supabase.");
         }
     }
+</script>
 </script>
 </body>
 </html>
