@@ -6,50 +6,44 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <title>Driver Dashboard - Yaatri</title>
     <style>
-        
     body { font-family: Arial, sans-serif; background-color: #333; color: white; padding: 20px; }
     body::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: url("https://electricvehicles.in/wp-content/uploads/2020/03/Indias-first-autonomous-buggy-2.jpg") no-repeat center/cover;
-    opacity: 0.4;   
-    z-index: -1;
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: url("https://electricvehicles.in/wp-content/uploads/2020/03/Indias-first-autonomous-buggy-2.jpg") no-repeat center/cover;
+        opacity: 0.4;   
+        z-index: -1;
+    }
     
-
-}
     .container { 
         max-width: 800px; 
         margin: 0 auto; 
         background: #222; 
         padding: 20px; 
         border-radius: 10px; 
-        border: 1px solid #58a6ff; /* Added solid border to anchor the glow */
+        border: 1px solid #58a6ff; 
         box-shadow: 0 0 15px rgba(88, 166, 255, 0.4), 0 0 30px rgba(88, 166, 255, 0.2); 
     }
 
-    /* 1. Updated Heading Style */
     h1 { 
         text-align: center; 
-        color: #58a6ff; /* Changed to match the blue container glow */
+        color: #58a6ff; 
         border-bottom: 2px solid #58a6ff; 
         padding-bottom: 10px; 
-        text-transform: uppercase; /* Makes "DRIVER ROUTE" look bold and official */
+        text-transform: uppercase; 
         letter-spacing: 2px;
-        text-shadow: 0 0 10px rgba(88, 166, 255, 0.5); /* Adds a slight text glow */
+        text-shadow: 0 0 10px rgba(88, 166, 255, 0.5); 
     }
     
-    /* Table Styles */
     table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; color: #333; border-radius: 8px; overflow: hidden; }
     th, td { padding: 15px; text-align: left; border-bottom: 1px solid #ddd; }
     th { background-color: #0056b3; color: white; font-size: 18px; }
     tr:hover { background-color: #f1f1f1; }
     .seat-badge { background: #ff4c4c; color: white; padding: 5px 10px; border-radius: 5px; font-weight: bold; }
 
-    /* Controls Container */
     .controls { display: flex; justify-content: space-between; margin-top: 20px; }
     
-    /* 2. Base Button Styles */
     button { 
         padding: 12px 20px; 
         border: none; 
@@ -58,34 +52,30 @@
         cursor: pointer; 
         font-weight: bold; 
         color: white;
-        transition: all 0.3s ease; /* Makes the hover effect smooth */
+        transition: all 0.3s ease; 
     }
 
-    /* 3. Refresh Button (Green Gradient + Thick Shadow) */
     .btn-refresh { 
         background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); 
-        /* Thick outer shadow + an inset shadow for a 3D button effect */
         box-shadow: 0 6px 15px rgba(56, 239, 125, 0.3), inset 0 -3px 0 rgba(0,0,0,0.15); 
     }
 
     .btn-refresh:hover {
-        transform: translateY(-3px); /* Makes button "lift" up */
+        transform: translateY(-3px); 
         box-shadow: 0 10px 20px rgba(56, 239, 125, 0.5), inset 0 -3px 0 rgba(0,0,0,0.15);
     }
 
-    /* 4. Clear Button (Red/Orange Gradient + Thick Shadow) */
     .btn-clear { 
         background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
         box-shadow: 0 6px 15px rgba(255, 65, 108, 0.3), inset 0 -3px 0 rgba(0,0,0,0.15); 
     }
 
     .btn-clear:hover {
-        transform: translateY(-3px); /* Makes button "lift" up */
+        transform: translateY(-3px); 
         box-shadow: 0 10px 20px rgba(255, 65, 108, 0.5), inset 0 -3px 0 rgba(0,0,0,0.15);
     }
 
     .empty-msg { text-align: center; padding: 20px; font-size: 18px; color: #aaa; }
-</style>
     </style>
 </head>
 <body>
@@ -123,180 +113,92 @@
     const supabaseKey = 'sb_publishable_lbnUTnmaM0HKgMCH6bqWdA_QvtV8b_C';
     const _supabase = createClient(supabaseUrl, supabaseKey);
 
-    // --- 2. CLOUD YAATRI NUMBER & TIMER ---
-    let currentYaatri = 1; 
-    let endTime = parseInt(localStorage.getItem('yaatriEndTime')) || (Date.now() + 10 * 60 * 1000);
-    localStorage.setItem('yaatriEndTime', endTime);
-
-    const titleElement = document.querySelector('h2');
-    const timeDisplay = document.getElementById('time');
-
+    // --- 2. FETCH YAATRI NUMBER ---
     async function fetchCloudYaatri() {
         try {
             const { data } = await _supabase.from('vehicle_state').select('yaatri_number').eq('id', 1).single();
             if (data) {
-                currentYaatri = data.yaatri_number;
-                if (titleElement) titleElement.innerText = `Book Yaatri ${currentYaatri}`;
+                document.getElementById('driver-title').innerText = `YAATRI ${data.yaatri_number} - DRIVER ROUTE`;
             }
         } catch (err) {
             console.error("Error fetching Yaatri number:", err);
         }
     }
-    fetchCloudYaatri();
 
-    const timerInterval = setInterval(() => {
-        const now = Date.now();
-        let distance = endTime - now;
-
-        if (distance <= 0) {
-            triggerVehicleSwitch("Time is up!");
-        } else {
-            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-            if(timeDisplay) timeDisplay.innerText = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-        }
-    }, 1000);
-
-    async function triggerVehicleSwitch(reason) {
-        currentYaatri = currentYaatri === 1 ? 2 : 1; 
-        endTime = Date.now() + 10 * 60 * 1000; 
-        localStorage.setItem('yaatriEndTime', endTime);
-        
+    // --- 3. FETCH & DISPLAY BOOKINGS ---
+    async function loadBookings() {
         try {
-            await _supabase.from('vehicle_state').update({ yaatri_number: currentYaatri }).eq('id', 1);
-        } catch(err) {}
-        
-        alert(`${reason} Now opening bookings for Yaatri ${currentYaatri}.`);
-        location.reload(); 
-    }
-
-    // --- 3. SEAT MAP SETUP ---
-    const seatMap = document.getElementById('seat-map');
-    let selectedSeats = []; 
-    const numPassengersSelect = document.getElementById('num-passengers');
-
-    numPassengersSelect.addEventListener('change', () => {
-        selectedSeats = [];
-        document.querySelectorAll('.seat.selected').forEach(s => s.classList.remove('selected'));
-    });
-
-    const chairIcon = `
-        <svg viewBox="0 0 24 24" width="45" height="45">
-            <rect x="5" y="2" width="14" height="5" rx="2" fill="currentColor"/>
-            <rect x="3" y="8" width="18" height="14" rx="3" fill="currentColor"/>
-        </svg>
-    `;
-
-    for (let i = 1; i <= 8; i++) {
-        const seat = document.createElement('div');
-        seat.className = 'seat';
-        if (i === 7 || i === 8) seat.classList.add('back-row');
-        
-        seat.innerHTML = `${chairIcon}<span class="seat-number">${i}</span>`;
-        seat.onclick = () => selectSeat(seat, i);
-        seatMap.appendChild(seat);
-    }
-
-    // --- 4. NEW: MULTIPLAYER SYNC ENGINE ---
-    // This constantly checks the cloud to see if someone else booked a seat!
-    async function syncBookedSeats() {
-        try {
-            const { data } = await _supabase.from('bookings').select('seat_numbers');
-            if (data) {
-                let bookedFromCloud = [];
-                // Collect all seat numbers currently in the database
-                data.forEach(row => {
-                    const seats = row.seat_numbers.split(',').map(s => parseInt(s.trim()));
-                    bookedFromCloud.push(...seats);
-                });
-
-                const allSeatDivs = document.querySelectorAll('.seat');
-                
-                bookedFromCloud.forEach(num => {
-                    const seatDiv = allSeatDivs[num - 1]; // arrays start at 0
-                    if (seatDiv && !seatDiv.classList.contains('booked')) {
-                        // If it's booked in the cloud, turn it RED instantly!
-                        seatDiv.classList.remove('selected');
-                        seatDiv.classList.add('booked');
-                        seatDiv.onclick = null; // Lock it
-
-                        // If the user was trying to click it, boot them off
-                        const index = selectedSeats.indexOf(num);
-                        if (index > -1) {
-                            selectedSeats.splice(index, 1);
-                        }
-                    }
-                });
-
-                // Auto-switch vehicle if all 8 are full
-                const bookedCount = document.querySelectorAll('.seat.booked').length;
-                if (bookedCount >= 8) {
-                    setTimeout(() => { triggerVehicleSwitch("All seats are full!"); }, 1000);
-                }
-            }
-        } catch (err) {
-            console.error("Sync error:", err);
-        }
-    }
-
-    // Run once immediately, then every 3 seconds
-    syncBookedSeats();
-    setInterval(syncBookedSeats, 3000);
-
-    // --- 5. SEAT SELECTION & BOOKING LOGIC ---
-    function selectSeat(seatElement, seatNumber) {
-        const maxPassengers = parseInt(numPassengersSelect.value);
-        if (!maxPassengers) return alert("Please select the Number of Passengers first!");
-
-        const seatIndex = selectedSeats.indexOf(seatNumber);
-        if (seatIndex > -1) {
-            selectedSeats.splice(seatIndex, 1);
-            seatElement.classList.remove('selected');
-        } else {
-            if (selectedSeats.length >= maxPassengers) {
-                return alert(`You have only chosen ${maxPassengers} passenger(s). Deselect a green seat to change.`);
-            }
-            selectedSeats.push(seatNumber);
-            seatElement.classList.add('selected');
-        }
-    }
-
-    const boardingSelect = document.getElementById('boarding');
-    const droppingSelect = document.getElementById('dropping');
-    droppingSelect.innerHTML = boardingSelect.innerHTML;
-    droppingSelect.options[0].text = "Select Dropping Point";
-
-    async function bookSeat() {
-        const maxPassengers = parseInt(numPassengersSelect.value);
-        const boardingText = boardingSelect.options[boardingSelect.selectedIndex].text;
-        const droppingText = droppingSelect.options[droppingSelect.selectedIndex].text;
-
-        if (!maxPassengers) return alert("Please select the number of passengers.");
-        if (selectedSeats.length !== maxPassengers) return alert(`Please select exactly ${maxPassengers} seat(s).`);
-        if (boardingSelect.value === "" || droppingSelect.value === "") return alert("Please select both boarding and dropping points.");
-        if (boardingText === droppingText) return alert("Boarding and dropping points cannot be the same.");
-
-        selectedSeats.sort((a, b) => a - b);
-        const seatString = selectedSeats.join(', ');
-
-        try {
-            const { error } = await _supabase.from('bookings').insert([
-                { seat_numbers: seatString, boarding_point: boardingText, dropping_point: droppingText }
-            ]);
-
+            // Grab all bookings, oldest to newest
+            const { data, error } = await _supabase.from('bookings').select('*').order('created_at', { ascending: true });
+            
             if (error) throw error;
-            alert(`Success! Seats ${seatString} booked.`);
+
+            const tbody = document.getElementById('passenger-list');
+            const emptyMsg = document.getElementById('empty-message');
             
-            // Instantly sync so the user sees it turn red without waiting 3 seconds
-            syncBookedSeats(); 
-            
-            selectedSeats = []; 
-            numPassengersSelect.value = ""; 
+            tbody.innerHTML = ''; // Clear current table
+
+            if (data.length === 0) {
+                emptyMsg.style.display = 'block';
+            } else {
+                emptyMsg.style.display = 'none';
+                
+                // Add each row to the table
+                data.forEach(booking => {
+                    const row = document.createElement('tr');
+                    
+                    // Format the timestamp nicely (e.g., "07:18 PM")
+                    const date = new Date(booking.created_at);
+                    let hours = date.getHours();
+                    let minutes = date.getMinutes();
+                    const ampm = hours >= 12 ? 'PM' : 'AM';
+                    hours = hours % 12;
+                    hours = hours ? hours : 12; 
+                    minutes = minutes < 10 ? '0' + minutes : minutes;
+                    const timeStr = hours + ':' + minutes + ' ' + ampm;
+
+                    row.innerHTML = `
+                        <td><span class="seat-badge">Seats: ${booking.seat_numbers}</span></td>
+                        <td><strong>${booking.boarding_point}</strong></td>
+                        <td><strong>${booking.dropping_point}</strong></td>
+                        <td>${timeStr}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
         } catch (error) {
-            console.error("Supabase Error:", error.message);
-            alert("Could not connect to Supabase.");
+            console.error("Error loading bookings:", error);
         }
     }
+
+    // --- 4. FINISH TRIP (CLEAR DATA) ---
+    async function finishTrip() {
+        if (!confirm("Are you sure you want to finish this trip and clear all passengers?")) return;
+
+        try {
+            // Delete all records to start fresh
+            const { error } = await _supabase.from('bookings').delete().neq('id', 0); 
+            
+            if (error) throw error;
+            
+            alert("Trip finished! Data cleared for the next round.");
+            loadBookings(); // Immediately empty the screen
+            
+        } catch (error) {
+            console.error("Error clearing data:", error.message);
+            alert("Could not clear data.");
+        }
+    }
+
+    // --- 5. STARTUP & REAL-TIME MULTIPLAYER SYNC ---
+    fetchCloudYaatri();
+    loadBookings();
+
+    // Force the driver's screen to refresh data every 3 seconds!
+    setInterval(() => {
+        fetchCloudYaatri();
+        loadBookings();
+    }, 3000);
 </script>
 
 </body>
