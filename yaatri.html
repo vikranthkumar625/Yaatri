@@ -292,16 +292,49 @@
     const supabaseKey = 'sb_publishable_lbnUTnmaM0HKgMCH6bqWdA_QvtV8b_C';
     const _supabase = createClient(supabaseUrl, supabaseKey);
 
-    let currentYaatri = 1; 
-
+    let currentYaatri = 0; // Starts at 0 so it forces a sync on load
     const titleElement = document.querySelector('h2');
-    const confirmBtn = document.querySelector('button[onclick="bookSeat()"]'); // Grabs your confirm button
+    const timeDisplay = document.getElementById('time');
+    const confirmBtn = document.querySelector('button[onclick="bookSeat()"]');
 
-    // --- 2. FETCH YAATRI NUMBER ---
+    // --- 2. THE CLOCK ENGINE (RESTORED & UPGRADED) ---
+    let endTime = parseInt(localStorage.getItem('yaatriEndTime')) || (Date.now() + 10 * 60 * 1000);
+    localStorage.setItem('yaatriEndTime', endTime);
+
+    const timerInterval = setInterval(() => {
+        const now = Date.now();
+        let distance = endTime - now;
+
+        if (distance <= 0) {
+            // Timer Lockdown!
+            if (timeDisplay) timeDisplay.innerText = "00:00";
+            if (confirmBtn) {
+                confirmBtn.disabled = true;
+                confirmBtn.innerText = "Time is up! Waiting for Driver...";
+                confirmBtn.style.background = "#555";
+                confirmBtn.style.cursor = "not-allowed";
+            }
+        } else {
+            // Clock Ticking
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+            if(timeDisplay) {
+                timeDisplay.innerText = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            }
+        }
+    }, 1000);
+
+    // --- 3. FETCH YAATRI NUMBER & RESET TIMER ---
     async function fetchCloudYaatri() {
         try {
             const { data } = await _supabase.from('vehicle_state').select('yaatri_number').eq('id', 1).single();
             if (data) {
+                // If the Driver switched the Yaatri number, restart the 10-minute clock!
+                if (currentYaatri !== 0 && currentYaatri !== data.yaatri_number) {
+                    endTime = Date.now() + 10 * 60 * 1000;
+                    localStorage.setItem('yaatriEndTime', endTime);
+                }
+                
                 currentYaatri = data.yaatri_number;
                 if (titleElement) titleElement.innerText = `Book Yaatri ${currentYaatri}`;
             }
@@ -310,7 +343,7 @@
         }
     }
 
-    // --- 3. SEAT MAP SETUP ---
+    // --- 4. SEAT MAP SETUP ---
     const seatMap = document.getElementById('seat-map');
     let selectedSeats = []; 
     const numPassengersSelect = document.getElementById('num-passengers');
@@ -336,7 +369,7 @@
         seatMap.appendChild(seat);
     }
 
-    // --- 4. THE MULTIPLAYER & LOCKDOWN ENGINE ---
+    // --- 5. THE MULTIPLAYER & LOCKDOWN ENGINE ---
     async function syncBookedSeats() {
         try {
             const { data, error } = await _supabase.from('bookings').select('seat_numbers');
@@ -354,12 +387,12 @@
 
             const allSeatDivs = document.querySelectorAll('.seat');
 
-            // 1. If Driver cleared the trip, restore red seats back to green/available!
+            // 1. If Driver cleared the trip, restore red seats back to green!
             document.querySelectorAll('.seat.booked').forEach(seat => {
                 const seatNum = parseInt(seat.innerText);
                 if (!bookedFromCloud.includes(seatNum)) {
                     seat.classList.remove('booked');
-                    seat.onclick = () => selectSeat(seat, seatNum); // Make clickable again
+                    seat.onclick = () => selectSeat(seat, seatNum); 
                 }
             });
 
@@ -376,17 +409,23 @@
                 }
             });
 
-            // 3. THE LOCKDOWN TRIGGER
-            if (bookedFromCloud.length >= 8) {
-                confirmBtn.disabled = true;
-                confirmBtn.innerText = "Vehicle En Route - Please Wait...";
-                confirmBtn.style.background = "#555"; // Turns button Gray
-                confirmBtn.style.cursor = "not-allowed";
-            } else {
-                confirmBtn.disabled = false;
-                confirmBtn.innerText = "Confirm Booking";
-                confirmBtn.style.background = ""; // Restores blue color
-                confirmBtn.style.cursor = "pointer";
+            // 3. SEAT LOCKDOWN TRIGGER
+            // (Only runs if the timer hasn't already locked the button)
+            const distance = endTime - Date.now();
+            if (bookedFromCloud.length >= 8 && distance > 0) {
+                if (confirmBtn) {
+                    confirmBtn.disabled = true;
+                    confirmBtn.innerText = "Vehicle En Route - Please Wait...";
+                    confirmBtn.style.background = "#555"; 
+                    confirmBtn.style.cursor = "not-allowed";
+                }
+            } else if (bookedFromCloud.length < 8 && distance > 0) {
+                if (confirmBtn) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerText = "Confirm Booking";
+                    confirmBtn.style.background = ""; 
+                    confirmBtn.style.cursor = "pointer";
+                }
             }
 
         } catch (err) {
@@ -403,7 +442,7 @@
     fetchCloudYaatri();
     syncBookedSeats();
 
-    // --- 5. SEAT SELECTION & BOOKING ---
+    // --- 6. SEAT SELECTION & BOOKING ---
     function selectSeat(seatElement, seatNumber) {
         const maxPassengers = parseInt(numPassengersSelect.value);
         if (!maxPassengers) return alert("Please select the Number of Passengers first!");
@@ -456,7 +495,6 @@
             alert("Could not connect to Supabase.");
         }
     }
-
 </script>
 </body>
 </html>
