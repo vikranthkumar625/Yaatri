@@ -293,18 +293,32 @@
     const supabaseKey = 'sb_publishable_lbnUTnmaM0HKgMCH6bqWdA_QvtV8b_C';
     const _supabase = createClient(supabaseUrl, supabaseKey);
 
-    // --- 2. AUTOMATED TIMER & VEHICLE LOOP ---
-    let currentYaatri = parseInt(localStorage.getItem('yaatriNumber')) || 1;
+    // --- 2. AUTOMATED TIMER & VEHICLE LOOP (CLOUD UPGRADED) ---
+    let currentYaatri = 1; // Will be updated by the cloud instantly
     let endTime = parseInt(localStorage.getItem('yaatriEndTime')) || (Date.now() + 10 * 60 * 1000);
-
-    // Save state so it survives page refreshes
-    localStorage.setItem('yaatriNumber', currentYaatri);
     localStorage.setItem('yaatriEndTime', endTime);
 
-    // Update the heading and grab the timer element
     const titleElement = document.querySelector('h2');
-    if (titleElement) titleElement.innerText = `Book Yaatri ${currentYaatri}`;
     const timeDisplay = document.getElementById('time');
+
+    // NEW: Fetch the true Yaatri number from the Cloud!
+    async function fetchCloudYaatri() {
+        try {
+            const { data, error } = await _supabase
+                .from('vehicle_state')
+                .select('yaatri_number')
+                .eq('id', 1)
+                .single();
+                
+            if (data) {
+                currentYaatri = data.yaatri_number;
+                if (titleElement) titleElement.innerText = `Book Yaatri ${currentYaatri}`;
+            }
+        } catch (err) {
+            console.error("Could not fetch Yaatri number:", err);
+        }
+    }
+    fetchCloudYaatri();
 
     // The Clock Engine
     const timerInterval = setInterval(() => {
@@ -322,13 +336,19 @@
         }
     }, 1000);
 
-    // The Switch Engine
-    function triggerVehicleSwitch(reason) {
+    // The Switch Engine (Cloud Upgraded)
+    async function triggerVehicleSwitch(reason) {
         currentYaatri = currentYaatri === 1 ? 2 : 1; 
         endTime = Date.now() + 10 * 60 * 1000; 
         
-        localStorage.setItem('yaatriNumber', currentYaatri);
         localStorage.setItem('yaatriEndTime', endTime);
+        
+        // Push the new vehicle number to the Cloud!
+        try {
+            await _supabase.from('vehicle_state').update({ yaatri_number: currentYaatri }).eq('id', 1);
+        } catch(err) {
+            console.error("Could not update vehicle state:", err);
+        }
         
         alert(`${reason} Now opening bookings for Yaatri ${currentYaatri}.`);
         location.reload(); 
@@ -359,7 +379,7 @@
         
         seat.innerHTML = `${chairIcon}<span class="seat-number">${i}</span>`;
         
-        // FIXED: All seats are now completely open and clickable by default!
+        // All seats are open and clickable by default!
         seat.onclick = () => selectSeat(seat, i);
         
         seatMap.appendChild(seat);
