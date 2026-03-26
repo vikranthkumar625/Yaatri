@@ -117,100 +117,186 @@
 </div>
 
 <script>
-    // Initialize Supabase (Use the exact same URL and Key from your project dashboard)
+    // --- 1. INITIALIZE SUPABASE ---
     const { createClient } = supabase;
     const supabaseUrl = 'https://sbvltccaagrsxtpqjcix.supabase.co';
     const supabaseKey = 'sb_publishable_lbnUTnmaM0HKgMCH6bqWdA_QvtV8b_C';
     const _supabase = createClient(supabaseUrl, supabaseKey);
-// NEW: Function to sync the title with the Student page
-   // NEW: Cloud-Synced Title Function
-    async function syncYaatriNumber() {
+
+    // --- 2. CLOUD YAATRI NUMBER & TIMER ---
+    let currentYaatri = 1; 
+    let endTime = parseInt(localStorage.getItem('yaatriEndTime')) || (Date.now() + 10 * 60 * 1000);
+    localStorage.setItem('yaatriEndTime', endTime);
+
+    const titleElement = document.querySelector('h2');
+    const timeDisplay = document.getElementById('time');
+
+    async function fetchCloudYaatri() {
         try {
-            const { data, error } = await _supabase
-                .from('vehicle_state')
-                .select('yaatri_number')
-                .eq('id', 1)
-                .single();
-                
+            const { data } = await _supabase.from('vehicle_state').select('yaatri_number').eq('id', 1).single();
             if (data) {
-                document.getElementById('driver-title').innerText = `Yaatri ${data.yaatri_number} - Driver Route`;
+                currentYaatri = data.yaatri_number;
+                if (titleElement) titleElement.innerText = `Book Yaatri ${currentYaatri}`;
             }
         } catch (err) {
-            console.error("Could not fetch Yaatri number:", err);
+            console.error("Error fetching Yaatri number:", err);
         }
     }
-    // Function to load data from the cloud
-    async function loadBookings() {
-        syncYaatriNumber();
+    fetchCloudYaatri();
+
+    const timerInterval = setInterval(() => {
+        const now = Date.now();
+        let distance = endTime - now;
+
+        if (distance <= 0) {
+            triggerVehicleSwitch("Time is up!");
+        } else {
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+            if(timeDisplay) timeDisplay.innerText = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+        }
+    }, 1000);
+
+    async function triggerVehicleSwitch(reason) {
+        currentYaatri = currentYaatri === 1 ? 2 : 1; 
+        endTime = Date.now() + 10 * 60 * 1000; 
+        localStorage.setItem('yaatriEndTime', endTime);
         
-        const tableBody = document.getElementById('passenger-list');
-        const emptyMsg = document.getElementById('empty-message');
-        tableBody.innerHTML = ''; 
+        try {
+            await _supabase.from('vehicle_state').update({ yaatri_number: currentYaatri }).eq('id', 1);
+        } catch(err) {}
+        
+        alert(`${reason} Now opening bookings for Yaatri ${currentYaatri}.`);
+        location.reload(); 
+    }
+
+    // --- 3. SEAT MAP SETUP ---
+    const seatMap = document.getElementById('seat-map');
+    let selectedSeats = []; 
+    const numPassengersSelect = document.getElementById('num-passengers');
+
+    numPassengersSelect.addEventListener('change', () => {
+        selectedSeats = [];
+        document.querySelectorAll('.seat.selected').forEach(s => s.classList.remove('selected'));
+    });
+
+    const chairIcon = `
+        <svg viewBox="0 0 24 24" width="45" height="45">
+            <rect x="5" y="2" width="14" height="5" rx="2" fill="currentColor"/>
+            <rect x="3" y="8" width="18" height="14" rx="3" fill="currentColor"/>
+        </svg>
+    `;
+
+    for (let i = 1; i <= 8; i++) {
+        const seat = document.createElement('div');
+        seat.className = 'seat';
+        if (i === 7 || i === 8) seat.classList.add('back-row');
+        
+        seat.innerHTML = `${chairIcon}<span class="seat-number">${i}</span>`;
+        seat.onclick = () => selectSeat(seat, i);
+        seatMap.appendChild(seat);
+    }
+
+    // --- 4. NEW: MULTIPLAYER SYNC ENGINE ---
+    // This constantly checks the cloud to see if someone else booked a seat!
+    async function syncBookedSeats() {
+        try {
+            const { data } = await _supabase.from('bookings').select('seat_numbers');
+            if (data) {
+                let bookedFromCloud = [];
+                // Collect all seat numbers currently in the database
+                data.forEach(row => {
+                    const seats = row.seat_numbers.split(',').map(s => parseInt(s.trim()));
+                    bookedFromCloud.push(...seats);
+                });
+
+                const allSeatDivs = document.querySelectorAll('.seat');
+                
+                bookedFromCloud.forEach(num => {
+                    const seatDiv = allSeatDivs[num - 1]; // arrays start at 0
+                    if (seatDiv && !seatDiv.classList.contains('booked')) {
+                        // If it's booked in the cloud, turn it RED instantly!
+                        seatDiv.classList.remove('selected');
+                        seatDiv.classList.add('booked');
+                        seatDiv.onclick = null; // Lock it
+
+                        // If the user was trying to click it, boot them off
+                        const index = selectedSeats.indexOf(num);
+                        if (index > -1) {
+                            selectedSeats.splice(index, 1);
+                        }
+                    }
+                });
+
+                // Auto-switch vehicle if all 8 are full
+                const bookedCount = document.querySelectorAll('.seat.booked').length;
+                if (bookedCount >= 8) {
+                    setTimeout(() => { triggerVehicleSwitch("All seats are full!"); }, 1000);
+                }
+            }
+        } catch (err) {
+            console.error("Sync error:", err);
+        }
+    }
+
+    // Run once immediately, then every 3 seconds
+    syncBookedSeats();
+    setInterval(syncBookedSeats, 3000);
+
+    // --- 5. SEAT SELECTION & BOOKING LOGIC ---
+    function selectSeat(seatElement, seatNumber) {
+        const maxPassengers = parseInt(numPassengersSelect.value);
+        if (!maxPassengers) return alert("Please select the Number of Passengers first!");
+
+        const seatIndex = selectedSeats.indexOf(seatNumber);
+        if (seatIndex > -1) {
+            selectedSeats.splice(seatIndex, 1);
+            seatElement.classList.remove('selected');
+        } else {
+            if (selectedSeats.length >= maxPassengers) {
+                return alert(`You have only chosen ${maxPassengers} passenger(s). Deselect a green seat to change.`);
+            }
+            selectedSeats.push(seatNumber);
+            seatElement.classList.add('selected');
+        }
+    }
+
+    const boardingSelect = document.getElementById('boarding');
+    const droppingSelect = document.getElementById('dropping');
+    droppingSelect.innerHTML = boardingSelect.innerHTML;
+    droppingSelect.options[0].text = "Select Dropping Point";
+
+    async function bookSeat() {
+        const maxPassengers = parseInt(numPassengersSelect.value);
+        const boardingText = boardingSelect.options[boardingSelect.selectedIndex].text;
+        const droppingText = droppingSelect.options[droppingSelect.selectedIndex].text;
+
+        if (!maxPassengers) return alert("Please select the number of passengers.");
+        if (selectedSeats.length !== maxPassengers) return alert(`Please select exactly ${maxPassengers} seat(s).`);
+        if (boardingSelect.value === "" || droppingSelect.value === "") return alert("Please select both boarding and dropping points.");
+        if (boardingText === droppingText) return alert("Boarding and dropping points cannot be the same.");
+
+        selectedSeats.sort((a, b) => a - b);
+        const seatString = selectedSeats.join(', ');
 
         try {
-            // Fetch all data from the Supabase 'bookings' table
-            const { data: bookings, error } = await _supabase
-                .from('bookings')
-                .select('*')
-                .order('created_at', { ascending: true });
+            const { error } = await _supabase.from('bookings').insert([
+                { seat_numbers: seatString, boarding_point: boardingText, dropping_point: droppingText }
+            ]);
 
             if (error) throw error;
-
-            if (bookings.length === 0) {
-                emptyMsg.style.display = 'block';
-            } else {
-                emptyMsg.style.display = 'none';
-                
-                bookings.forEach(booking => {
-                    // Convert standard timestamp to readable time
-                    const dateObj = new Date(booking.created_at);
-                    const timeString = dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-
-                    const row = `
-                        <tr>
-                            <td><span class="seat-badge">Seats: ${booking.seat_numbers}</span></td>
-                            <td><strong>${booking.boarding_point}</strong></td>
-                            <td><strong>${booking.dropping_point}</strong></td>
-                            <td>${timeString}</td>
-                        </tr>
-                    `;
-                    tableBody.innerHTML += row;
-                });
-            }
+            alert(`Success! Seats ${seatString} booked.`);
+            
+            // Instantly sync so the user sees it turn red without waiting 3 seconds
+            syncBookedSeats(); 
+            
+            selectedSeats = []; 
+            numPassengersSelect.value = ""; 
         } catch (error) {
-            console.error("Error fetching data:", error.message);
-            emptyMsg.innerHTML = "Error loading from cloud database.";
-            emptyMsg.style.display = 'block';
+            console.error("Supabase Error:", error.message);
+            alert("Could not connect to Supabase.");
         }
     }
-
-    // Function to clear the cloud database after the trip is done
-    async function finishTrip() {
-        if(confirm("Are you sure you want to finish the trip? This will clear all passenger data from the cloud.")) {
-            try {
-                // Supabase requires a filter to delete rows. 
-                // Telling it to delete where 'id' is greater than 0 deletes EVERYTHING.
-                const { error } = await _supabase
-                    .from('bookings')
-                    .delete()
-                    .gt('id', 0); 
-
-                if (error) throw error;
-
-                // Clear the visual table on the screen
-                document.getElementById('passenger-list').innerHTML = '';
-                document.getElementById('empty-message').style.display = 'block';
-
-                alert("Trip finished!. Vehicle is ready for the next 10-minute slot.");
-            } catch (error) {
-                console.error("Error clearing database:", error.message);
-                alert("Could not clear the database. Check console for details.");
-            }
-        }
-    }
-
-    // Load data automatically when the driver opens the page
-    loadBookings();
 </script>
 
 </body>
